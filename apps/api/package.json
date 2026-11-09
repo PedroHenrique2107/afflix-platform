@@ -5,9 +5,9 @@
     "build":"tsc -p tsconfig.build.json",
     "start":"node dist/main.js",
     "test":"vitest run",
-    "prisma:generate":"prisma generate",
-    "prisma:migrate":"prisma migrate dev",
-    "prisma:studio":"prisma studio"
+    "prisma:generate":"node --env-file=../../.env ./node_modules/prisma/build/index.js generate",
+    "prisma:migrate":"node --env-file=../../.env ./node_modules/prisma/build/index.js migrate dev",
+    "prisma:studio":"node --env-file=../../.env ./node_modules/prisma/build/index.js studio"
   },
   "dependencies":{
     "@nestjs/common":"^11.0.0","@nestjs/core":"^11.0.0","@nestjs/platform-express":"^11.0.0",
