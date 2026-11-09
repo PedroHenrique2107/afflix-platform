@@ -1,6 +1,6 @@
 # Status do Afflix — 08/11/2026
 
-**Estado:** PR-001 validada de ponta a ponta neste ambiente, incluindo Docker/Postgres/migrações e a API rodando de verdade. Dois bugs reais de DI/validação encontrados e corrigidos durante a validação.
+**Estado:** PR-001 validada de ponta a ponta neste ambiente, incluindo Docker/Postgres/migrações, API e **frontend React validado manualmente no navegador pelo usuário** (busca padrão retorna as 2 ofertas mock; filtro 12% retorna lista vazia). Dois bugs reais de DI/validação encontrados e corrigidos durante a validação.
 
 ## Validado
 - `pnpm install`: OK.
@@ -12,6 +12,7 @@
 - `pnpm --filter @afflix/api dev`: NestJS sobe e responde.
 - `GET /api/v1/health`: retorna `{"status":"ok"}`.
 - `GET /api/v1/products/search?keyword=organizador de cozinha&minCommissionPercent=8`: retorna as 2 ofertas mock (8% e 11%); com corte de 12% retorna lista vazia — confirma que a de 7,5% (e demais abaixo do corte) é excluída.
+- Frontend (`pnpm dev`, http://localhost:5173, proxy Vite → API): validado manualmente no navegador. Formulário pré-preenchido, busca padrão mostra os 2 cards mock com aviso de dado demonstrativo, filtro 12% zera a lista.
 
 ## Bugs encontrados e corrigidos nesta validação
 1. **`apps/api/tsconfig.json`**: `moduleResolution: "Node"` estava deprecated (TS 5.9) e `target: "ES2022"` ativava `useDefineForClassFields: true`, o que quebra parameter properties com decorators. Corrigido (removido `moduleResolution` explícito, adicionado `useDefineForClassFields: false`).
