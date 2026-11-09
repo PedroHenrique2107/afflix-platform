@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target":"ES2022","module":"CommonJS","moduleResolution":"Node",
+    "target":"ES2022","module":"CommonJS","useDefineForClassFields":false,
     "strict":true,"esModuleInterop":true,"skipLibCheck":true,
     "experimentalDecorators":true,"emitDecoratorMetadata":true,
     "outDir":"dist","rootDir":"src","types":["node"]

@@ -1,4 +1,4 @@
-import { Injectable, BadGatewayException } from '@nestjs/common';
+import { Inject, Injectable, BadGatewayException } from '@nestjs/common';
 import { ShopeeGraphqlClient } from '../shopee/shopee-graphql.client';
 import { PRODUCT_OFFERS_QUERY } from '../shopee/shopee.queries';
 import { OfferProvider, OfferSearch, OfferSearchResponse, Offer } from './offer-provider';
@@ -14,7 +14,7 @@ type Result = { productOfferV2: { nodes: ShopeeNode[]; pageInfo: { page: number;
 const textOrUndefined = (x: string | number | null | undefined): string | undefined => x == null ? undefined : String(x);
 @Injectable()
 export class ShopeeOfferProvider implements OfferProvider {
-  constructor(private readonly client: ShopeeGraphqlClient) {}
+  constructor(@Inject(ShopeeGraphqlClient) private readonly client: ShopeeGraphqlClient) {}
   async search(params: OfferSearch): Promise<OfferSearchResponse> {
     const data = await this.client.execute<Result>(PRODUCT_OFFERS_QUERY, params);
     if (!data.productOfferV2 || !Array.isArray(data.productOfferV2.nodes)) {
