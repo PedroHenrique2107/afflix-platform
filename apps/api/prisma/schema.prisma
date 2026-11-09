@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Marketplace {
+  SHOPEE
+}
+
+enum PublicationStatus {
+  DRAFT
+  READY
+  PUBLISHED_MANUALLY
+  ARCHIVED
+}
+
+model Product {
+  id                  String   @id @default(uuid()) @db.Uuid
+  marketplace         Marketplace @default(SHOPEE)
+  shopId              String
+  itemId              String
+  name                String
+  productUrl          String
+  offerUrl            String?
+  imageUrl            String?
+  price               Decimal? @db.Decimal(12, 2)
+  priceMax            Decimal? @db.Decimal(12, 2)
+  commissionRate      Decimal? @db.Decimal(10, 6)
+  estimatedCommission Decimal? @db.Decimal(12, 2)
+  rating              Decimal? @db.Decimal(3, 2)
+  sales               Int?
+  lastSyncedAt        DateTime @default(now())
+  isArchived          Boolean @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  snapshots           PriceSnapshot[]
+  links               AffiliateLink[]
+  publications        Publication[]
+
+  @@unique([marketplace, shopId, itemId])
+  @@index([commissionRate])
+  @@index([lastSyncedAt])
+}
+
+model PriceSnapshot {
+  id             String @id @default(uuid()) @db.Uuid
+  productId      String @db.Uuid
+  price          Decimal? @db.Decimal(12, 2)
+  commissionRate Decimal? @db.Decimal(10, 6)
+  observedAt     DateTime @default(now())
+  product        Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  @@index([productId, observedAt])
+}
+
+model AffiliateLink {
+  id         String @id @default(uuid()) @db.Uuid
+  productId  String @db.Uuid
+  channel    String
+  campaign   String?
+  subIds     Json
+  shortUrl   String
+  createdAt  DateTime @default(now())
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  @@index([productId, channel])
+}
+
+model MediaAsset {
+  id              String @id @default(uuid()) @db.Uuid
+  title           String
+  storagePath     String
+  sha256          String?
+  sourceUrl       String?
+  licenseType     String
+  rightsEvidence  String?
+  licenseExpiresAt DateTime?
+  createdAt       DateTime @default(now())
+  publications    Publication[]
+}
+
+model Publication {
+  id             String @id @default(uuid()) @db.Uuid
+  productId      String @db.Uuid
+  mediaAssetId   String? @db.Uuid
+  channel        String
+  status         PublicationStatus @default(DRAFT)
+  caption        String?
+  externalUrl    String?
+  publishedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  product        Product @relation(fields: [productId], references: [id])
+  mediaAsset     MediaAsset? @relation(fields: [mediaAssetId], references: [id])
+  @@index([status, channel])
+}

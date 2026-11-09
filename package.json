@@ -1,0 +1,9 @@
+{
+  "name": "afflix-platform", "private": true, "version": "0.1.0",
+  "packageManager": "pnpm@10.18.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @afflix/api --filter @afflix/web dev",
+    "build": "pnpm --filter @afflix/api build && pnpm --filter @afflix/web build",
+    "test": "pnpm --filter @afflix/api test"
+  }
+}
