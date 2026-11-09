@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 node_modules/
 .pnpm-store/
 dist/
@@ -20,3 +21,6 @@ data/
 *.zip
 *.tsbuildinfo
 .claude/
+=======
+node_modules
+>>>>>>> Stashed changes
