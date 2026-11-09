@@ -18,3 +18,4 @@ data/
 *.mov
 *.webm
 *.zip
+*.tsbuildinfo
