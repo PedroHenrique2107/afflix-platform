@@ -11,7 +11,7 @@ cd C:\dev\GitHub\afflix-platform
 corepack enable
 corepack prepare pnpm@10.18.0 --activate
 pnpm install
-Copy-Item apps/api/.env.example apps/api/.env
+Copy-Item .env.example .env
 # Confirme SHOPEE_MOCK_MODE=true
 docker compose up -d
 pnpm --filter @afflix/api prisma:generate

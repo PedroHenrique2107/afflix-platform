@@ -207,8 +207,8 @@ corepack enable
 pnpm install
 
 # Criar o arquivo local de ambiente da API
-# PowerShell: Copy-Item apps/api/.env.example apps/api/.env
-# bash: cp apps/api/.env.example apps/api/.env
+# PowerShell: Copy-Item .env.example .env
+# bash: cp .env.example .env
 
 docker compose up -d
 pnpm --filter @afflix/api prisma:generate
