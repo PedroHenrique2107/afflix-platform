@@ -1,26 +1,38 @@
-<<<<<<< Updated upstream
+# Dependencias
 node_modules/
 .pnpm-store/
+
+# Builds e artefatos
 dist/
 build/
 coverage/
+*.tsbuildinfo
+
+# Ambiente / segredos
 .env
 .env.*
 !.env.example
+
+# Logs
 *.log
+
+# Sistema operacional
 .DS_Store
+
+# Editores / ferramentas
 .vscode/
 .idea/
+.claude/
+
+# Dados locais e dumps
 data/
 *.sql
+!apps/*/prisma/migrations/**/*.sql
 *.dump
 *.bak
+
+# Midia e arquivos pesados
 *.mp4
 *.mov
 *.webm
 *.zip
-*.tsbuildinfo
-.claude/
-=======
-node_modules
->>>>>>> Stashed changes
