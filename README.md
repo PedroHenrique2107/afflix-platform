@@ -72,6 +72,22 @@ flowchart TD
 
 O repositório é único para facilitar colaboração, versionamento de contratos e revisão por pull request. **Frontend e backend permanecem aplicações separadas** e poderão ser implantados independentemente no futuro. Não é necessário criar um repositório para cada serviço na V1.
 
+### Regra de arquitetura — obrigatória em toda implementação
+
+O Afflix é um **monorepo monolítico** gerenciado por pnpm workspaces. **Toda implementação neste repositório deve seguir essa arquitetura, sem exceção.** O objetivo é manter a comunicação entre as partes íntegra e rastreável: um único grafo de dependências, um único lockfile, um único ciclo de build e teste.
+
+O que isso exige na prática:
+
+- **Todo código novo nasce dentro de um workspace existente** — `apps/api`, `apps/web` ou `packages/shared`. Não criar repositório separado, serviço externo, submódulo Git nem pacote publicado fora daqui.
+- **Tipo ou contrato usado por mais de um workspace vive em `packages/shared`.** Nunca duplicar a definição nos dois lados: duplicata é como a comunicação entre as partes se rompe silenciosamente.
+- **A comunicação entre frontend e backend é sempre REST/JSON sobre os contratos versionados** — o `web` nunca acessa o banco, nunca importa código de `apps/api` e nunca fala com a Shopee diretamente.
+- **Toda dependência externa de marketplace passa pela interface `OfferProvider`**, que é a fronteira que permite trocar mock por integração real sem tocar no resto.
+- **Dependência é declarada no workspace que a usa**, e o `pnpm-lock.yaml` da raiz é a única fonte de verdade. Não instalar na raiz o que pertence a um app.
+- **Comandos canônicos continuam na raiz** (`pnpm dev`, `pnpm build`, `pnpm test`), atravessando todos os workspaces. Uma entrega não está pronta se quebra o ciclo da raiz.
+- **Nada de serviço avulso ou processo paralelo** para resolver um problema pontual: a V1 roda localmente como um conjunto único, iniciado por um comando só.
+
+Mudar essa arquitetura exige decisão explícita registrada em ADR — não acontece como efeito colateral de uma entrega.
+
 ### Estrutura-alvo
 
 ```text
