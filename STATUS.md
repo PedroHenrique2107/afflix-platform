@@ -31,9 +31,19 @@
 - Pendente: provar a migração em banco limpo com `prisma migrate reset` (o banco local já tinha a `init` aplicada).
 - Fora de escopo: `AffiliateLink` real, MediaAsset, publicações, UI do `saved`.
 
+## SW-2 — Links de afiliado rastreáveis (em andamento, branch `feat/SW-2-links-afiliado`)
+- SW-8: `ShopeeGraphqlClient.generateShortLink` (sem retry; `shortLink` só aceito em host da Shopee).
+- SW-9: `POST /api/v1/affiliate-links` com persistência em `AffiliateLink`; migration `affiliate_link_dedupe_key` (`dedupeKey` único, sem duplicar link); `LinkProvider` mock/shopee por `SHOPEE_MOCK_MODE`.
+- `packages/shared` agora é consumido por api e web (build CJS em `dist`; testes e Vite leem `src`). Canais, limites de subIds e tipos do link vivem lá.
+- Import devolve `items` com `id`; busca devolve `productId` (campos adicionais, sem quebra).
+- SW-10: card com canal, campanha, "Gerar link" e "Copiar"; aviso de link fictício em modo mock.
+- Validado (18/11/2026): `pnpm test` 57/57, `pnpm build` OK; api via `node dist` e via `tsx` contra Postgres real em mock forçado: import → link → mesmo pedido reaproveitado (1 linha no banco), 400 canal inválido, 404 produto inexistente.
+- Conta real (18/11/2026, teste do Pedro): schema exige input inline e `subIds: [String!]` (o tipo `GenerateShortLinkInput` não existe, erro 10010). Com isso, `generateShortLink` gerou link `https://s.shopee.com.br/...` com e sem subIds a partir da URL `/product/<shop>/<item>`.
+- **Pendente:** confirmar a atribuição dos subIds no painel da conta (critério do card) e o limite máximo de subIds.
+
 ## Pendente
 - Validar query GraphQL com acesso real aprovado pela Shopee.
-- Implementar links e publicações manuais em PRs futuras.
+- Implementar publicações manuais em PRs futuras.
 - Avaliar extensão do mesmo padrão explícito (`@Inject`) a outros módulos que venham a ser criados, enquanto o dev runner continuar sendo `tsx`.
 - Push/PR não realizados (aguardando autorização do usuário).
 
