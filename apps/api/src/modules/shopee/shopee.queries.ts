@@ -10,7 +10,10 @@ query SearchOffers($keyword: String!, $page: Int!, $limit: Int!) {
   }
 }`;
 
+// Input montado inline: o schema da Shopee não expõe "GenerateShortLinkInput" (erro 10010 Unknown type,
+// observado na conta real em 18/11/2026). Variáveis escalares evitam depender do nome interno do tipo.
+// subIds é [String!] no schema real (10010 com [String]).
 export const GENERATE_SHORT_LINK_MUTATION = `
-mutation GenerateLink($input: GenerateShortLinkInput!) {
-  generateShortLink(input: $input) { shortLink }
+mutation GenerateLink($originUrl: String!, $subIds: [String!]) {
+  generateShortLink(input: { originUrl: $originUrl, subIds: $subIds }) { shortLink }
 }`;
