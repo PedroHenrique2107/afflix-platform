@@ -1,20 +1,26 @@
 import { randomUUID } from 'node:crypto';
+import { Prisma } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 
 type Row = Record<string, any>;
 type UniqueWhere = { marketplace_shopId_itemId: { marketplace: string; shopId: string; itemId: string } };
 
-// Prisma em memória só para testes unitários (a CI não tem banco). Imita o contrato usado pelo DiscoveryService:
-// upsert pela unique composta, snapshots, findMany por OR, count e $transaction (callback ou array).
+// Prisma em memória só para testes unitários (a CI não tem banco). Imita o contrato usado pelos services:
+// upsert pela unique composta, snapshots, findMany por OR, count, $transaction (callback ou array)
+// e AffiliateLink com unique em dedupeKey (lança P2002 como o Prisma real).
 export function createFakePrisma(options: { failFindMany?: boolean } = {}) {
   const products: Row[] = [];
   const snapshots: Row[] = [];
+  const links: Row[] = [];
   const same = (p: Row, k: UniqueWhere['marketplace_shopId_itemId']) =>
     p.marketplace === k.marketplace && p.shopId === k.shopId && p.itemId === k.itemId;
   const defined = (o: Row) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));
 
   const api: Row = {
     product: {
+      async findUnique(args: { where: { id: string } }) {
+        return products.find(p => p.id === args.where.id) ?? null;
+      },
       async findMany(args: { where?: { OR?: Row[]; isArchived?: boolean }; select?: Row; skip?: number; take?: number }) {
         if (options.failFindMany) throw new Error('banco indisponível');
         let rows = products.filter(p => {
@@ -44,10 +50,23 @@ export function createFakePrisma(options: { failFindMany?: boolean } = {}) {
         return row;
       },
     },
+    affiliateLink: {
+      async findUnique(args: { where: { dedupeKey: string } }) {
+        return links.find(l => l.dedupeKey === args.where.dedupeKey) ?? null;
+      },
+      async create(args: { data: Row }) {
+        if (links.some(l => l.dedupeKey === args.data.dedupeKey)) {
+          throw new Prisma.PrismaClientKnownRequestError('Unique constraint failed on dedupeKey', { code: 'P2002', clientVersion: 'fake' });
+        }
+        const row = { id: randomUUID(), createdAt: new Date(), campaign: null, ...defined(args.data) };
+        links.push(row);
+        return row;
+      },
+    },
     async $transaction(arg: ((tx: Row) => Promise<unknown>) | Promise<unknown>[]) {
       return typeof arg === 'function' ? arg(api) : Promise.all(arg);
     },
   };
 
-  return { prisma: api as unknown as PrismaService, products, snapshots };
+  return { prisma: api as unknown as PrismaService, products, snapshots, links };
 }

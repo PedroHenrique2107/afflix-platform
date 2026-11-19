@@ -51,6 +51,13 @@ describe('saved na busca', () => {
     expect(after.data.map(p => [p.itemId, p.saved])).toEqual([['123', true], ['125', false]]);
   });
 
+  it('devolve productId do catálogo quando salvo e null quando não', async () => {
+    const { service, products } = newService();
+    await service.importOffers(importDto(offer(123, { shopId: '456', commissionRate: '0.080000' })));
+    const result = await service.search(query());
+    expect(result.data.map(p => [p.itemId, p.productId])).toEqual([['123', products[0].id], ['125', null]]);
+  });
+
   it('não derruba a busca se o banco estiver indisponível', async () => {
     const result = await newService({ failFindMany: true }).service.search(query());
     expect(result.data.length).toBeGreaterThan(0);
@@ -64,8 +71,9 @@ describe('importOffers', () => {
     const first = await service.importOffers(importDto(offer(1, { price: '10.00', commissionRate: '0.080000' })));
     const second = await service.importOffers(importDto(offer(1, { price: '12.50', commissionRate: '0.100000' })));
 
-    expect(first.data).toEqual({ created: 1, updated: 0, total: 1 });
-    expect(second.data).toEqual({ created: 0, updated: 1, total: 1 });
+    const item = { id: products[0].id, marketplace: 'SHOPEE', shopId: '456', itemId: '1' };
+    expect(first.data).toEqual({ created: 1, updated: 0, total: 1, items: [item] });
+    expect(second.data).toEqual({ created: 0, updated: 1, total: 1, items: [item] });
     expect(products).toHaveLength(1);
     expect(snapshots).toHaveLength(2);
     expect(snapshots.every(s => s.productId === products[0].id)).toBe(true);
@@ -100,9 +108,15 @@ describe('importOffers', () => {
   it('mesma oferta repetida no lote conta 1 criada, 1 atualizada e 2 snapshots', async () => {
     const { service, products, snapshots } = newService();
     const result = await service.importOffers(importDto(offer(1), offer(1)));
-    expect(result.data).toEqual({ created: 1, updated: 1, total: 2 });
+    expect(result.data).toEqual({ created: 1, updated: 1, total: 2, items: [{ id: products[0].id, marketplace: 'SHOPEE', shopId: '456', itemId: '1' }] });
     expect(products).toHaveLength(1);
     expect(snapshots).toHaveLength(2);
+  });
+
+  it('items traz um id por produto distinto do lote', async () => {
+    const { service, products } = newService();
+    const result = await service.importOffers(importDto(offer(1), offer(2)));
+    expect(result.data.items.map(i => i.id)).toEqual(products.map(p => p.id));
   });
 });
 
