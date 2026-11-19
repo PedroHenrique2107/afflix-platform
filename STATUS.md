@@ -20,9 +20,20 @@
    - `DiscoveryController` (injeção de `DiscoveryService`) e `ShopeeOfferProvider` (injeção de `ShopeeGraphqlClient`) → corrigido com `@Inject(Classe)` explícito.
    - `@Query() query: SearchProductsDto` no `DiscoveryController.search` nunca era transformado/validado (chegava como strings cruas) → corrigido instanciando e validando o DTO manualmente com `plainToInstance`/`validate` dentro do controller, em vez de depender da reflexão implícita de tipo do Nest.
 
+## SW-1 — Persistência: produtos e importação com upsert (em andamento, branch `feat/SW-1-persistencia-produtos-importacao-upsert`)
+- `PrismaModule` global + `PrismaService` (conecta/desconecta no ciclo de vida do Nest; `enableShutdownHooks` no `main.ts`).
+- `POST /api/v1/products/import`: upsert idempotente + `PriceSnapshot` por oferta, na mesma transação. Retorna `{created, updated, total}`.
+- `GET /api/v1/products`: catálogo paginado (`lastSyncedAt desc`, sem arquivados).
+- `saved` da busca agora vem do catálogo (consulta em lote; sem banco, cai para `false`).
+- Decimais via `Prisma.Decimal` com arredondamento half-up na escala do schema; nunca `Number`.
+- Validado: `pnpm test` 30/30 e `pnpm build` OK (Prisma mockado em memória nos testes).
+- Validado contra Postgres real (18/11/2026): API sobe com DI via `tsx`; importar a mesma oferta duas vezes resultou em 1 `Product` e 2 `PriceSnapshot` (`59.90/0.080000` e `62.35/0.100000`); decimais exatos no banco; `GET /products` paginado; `saved` correto na busca (modo mock); body inválido e `page=0` retornam 400.
+- Pendente: provar a migração em banco limpo com `prisma migrate reset` (o banco local já tinha a `init` aplicada).
+- Fora de escopo: `AffiliateLink` real, MediaAsset, publicações, UI do `saved`.
+
 ## Pendente
 - Validar query GraphQL com acesso real aprovado pela Shopee.
-- Implementar persistência, links e publicações manuais em PRs futuras.
+- Implementar links e publicações manuais em PRs futuras.
 - Avaliar extensão do mesmo padrão explícito (`@Inject`) a outros módulos que venham a ser criados, enquanto o dev runner continuar sendo `tsx`.
 - Push/PR não realizados (aguardando autorização do usuário).
 
