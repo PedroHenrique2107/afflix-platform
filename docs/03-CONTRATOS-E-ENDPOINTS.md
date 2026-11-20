@@ -112,6 +112,44 @@ Estado da integração Shopee sem revelar segredo. Tipo do contrato em `@afflix/
 - A **mutation** `generateShortLink` nunca é repetida automaticamente (não é idempotente).
 - Mensagens públicas: `10020` → `502 Falha de autenticação com a Shopee`; `10035` → `502 Conta sem acesso à API da Shopee`; limite → `503`; `10000` após esgotar as tentativas → `502 Shopee indisponível no momento`. O código e a mensagem da Shopee vão só para o log da api.
 
+## Biblioteca de mídia — implementado (SW-16 / RF09)
+
+Tipos do contrato em `@afflix/shared` (`MediaAssetView`, `CreateMediaAssetFields`, `UpdateMediaAssetRequest`, `ListMediaAssetsResponse`, `MEDIA_LICENSE_TYPES`).
+
+### POST /media
+
+`multipart/form-data` com o arquivo no campo `file` (só `video/*`, até 500 MB) e os campos em texto:
+
+- `title` (obrigatório): até 200 caracteres.
+- `licenseType` (obrigatório): um de `ORIGINAL`, `COMMERCIAL_LICENSE`, `CREATOR_CONSENT`, `CC_COMMERCIAL`.
+- `sourceUrl` (opcional): URL http/https de origem.
+- `rightsEvidence` (opcional): prova de licença (contrato, termo, nota da compra), até 2000 caracteres.
+- `licenseExpiresAt` (opcional): `YYYY-MM-DD` (vale até o fim do dia, UTC) ou ISO 8601. Ausente = sem vencimento.
+
+`sha256` e `storagePath` **nunca** vêm do cliente (enviar qualquer um vira `400`). A api calcula o SHA-256 do arquivo em stream e o grava em `MEDIA_STORAGE_DIR` (padrão `data/media`, fora do Git) como `<sha256>.<ext>`; `storagePath` é relativo a essa pasta.
+
+Resposta `201`:
+
+```json
+{ "data": { "id":"…","title":"Unboxing","storagePath":"961a…4ae8.mp4","sha256":"961a…4ae8",
+  "sourceUrl":"https://exemplo.com/v","licenseType":"CREATOR_CONSENT","rightsEvidence":null,
+  "licenseExpiresAt":"2027-06-30T23:59:59.999Z","licenseStatus":"MISSING_EVIDENCE","publishable":false,"createdAt":"…" } }
+```
+
+- Erros: `400` validação (sem `licenseType`, sem arquivo, arquivo que não é vídeo), `409` arquivo com o mesmo SHA-256 já cadastrado, `413` acima do limite. Em qualquer erro o arquivo enviado é apagado.
+
+### GET /media
+
+Lista paginada, mais recente primeiro. Query `page` (>=1, padrão 1) e `limit` (1–50, padrão 20). Mesmo `meta` do `GET /products`.
+
+### PATCH /media/:id
+
+JSON só com metadados: `title`, `licenseType`, `sourceUrl`, `rightsEvidence`, `licenseExpiresAt`. Ausente mantém; `null` ou vazio limpa os opcionais. Arquivo, `storagePath` e `sha256` são imutáveis (`400`). `404` se o asset não existe.
+
+### Regra de licença
+
+`licenseStatus` é calculado a cada resposta: `VALID` (tem `rightsEvidence` e não venceu), `MISSING_EVIDENCE` ou `EXPIRED`. `publishable` = `VALID`. O módulo de publicações deve chamar `assertMediaPublishable()` (`apps/api/src/modules/media/media-license.ts`) antes de associar um asset: fora de `VALID` responde `409`.
+
 ## Rotas do backlog (não implementadas no scaffold)
 
 | Método | Endpoint | Regras |
@@ -119,7 +157,6 @@ Estado da integração Shopee sem revelar segredo. Tipo do contrato em `@afflix/
 | GET | `/products/:id` | Retornar dados e último snapshot |
 | POST | `/products/:id/refresh` | Atualizar com fonte e horário, preservar snapshot |
 | GET | `/products/:id/history` | Preços/taxas anteriores com timezone UTC |
-| POST | `/media` | asset com origem, direitos, caminho e hash |
 | POST | `/publications` | rascunho com produto, mídia, canal |
 | PATCH | `/publications/:id` | transições e URL publicada manualmente |
 
