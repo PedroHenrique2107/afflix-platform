@@ -41,8 +41,16 @@
 - Conta real (18/11/2026, teste do Pedro): schema exige input inline e `subIds: [String!]` (o tipo `GenerateShortLinkInput` não existe, erro 10010). Com isso, `generateShortLink` gerou link `https://s.shopee.com.br/...` com e sem subIds a partir da URL `/product/<shop>/<item>`.
 - **Pendente:** confirmar a atribuição dos subIds no painel da conta (critério do card) e o limite máximo de subIds.
 
+## SW-3 — Homologação da integração Shopee com credenciais reais (branch `feat/SW-3-homologacao-shopee`)
+- SW-4: `productOfferV2` homologado na conta real (20/11/2026) via `pnpm --filter @afflix/api shopee:homologar` (introspecção + busca; saída sem credencial). Query aceita sem ajuste; `commissionRate` é fração (confirmado: `commission = priceMin × rate`); IDs `Int64` com ~11 dígitos (seguros). Provider descarta ID fora do intervalo seguro e mapeia `ratingStar "0"` como sem avaliação. Resultado em `docs/05`.
+- SW-5: testes por fixture para 10020, 10035, 429, `data + errors` e timeout; nenhum cenário vaza credencial em mensagem HTTP ou log.
+- SW-6: retry com backoff exponencial + jitter só na busca, em 429/5xx/timeout/rede/10030/10000; respeita `Retry-After` (desiste acima de 30s); teto em `SHOPEE_MAX_RETRIES` (padrão 2). Nunca repete 10020/10035/4xx nem a mutation `generateShortLink`.
+- SW-7: `GET /api/v1/integrations/status` → `{ mode, lastSuccessfulSyncAt }` (em memória). `ShopeeModule` com instância única do client; chave mock/live centralizada em `isShopeeLiveMode()`.
+- Validado (20/11/2026): `pnpm test` 96/96, `pnpm build` OK. Com `SHOPEE_MOCK_MODE=false` e Postgres real (teste do Pedro): status `live`/`null` → busca com 3 ofertas reais (`source: "shopee"`) → status com `lastSuccessfulSyncAt` preenchido. Shopee devolveu `10000 System Error` numa tentativa (body idêntico ao do script que funcionou) — motivou incluir 10000 no retry.
+- Observação fora do escopo: a api não sobe sem Postgres (`PrismaService.onModuleInit`), embora a busca tolere banco indisponível.
+
 ## Pendente
-- Validar query GraphQL com acesso real aprovado pela Shopee.
+- ~~Validar query GraphQL com acesso real aprovado pela Shopee.~~ Feito na SW-3 (busca). Atribuição dos subIds no painel segue pendente (SW-2).
 - Implementar publicações manuais em PRs futuras.
 - Avaliar extensão do mesmo padrão explícito (`@Inject`) a outros módulos que venham a ser criados, enquanto o dev runner continuar sendo `tsx`.
 - Push/PR não realizados (aguardando autorização do usuário).
