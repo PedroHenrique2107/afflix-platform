@@ -91,6 +91,27 @@ Lista o catálogo persistido (`isArchived: false`), ordenado por `lastSyncedAt` 
 
 Decimais saem como string na escala do schema (`"0.080000"`, nunca `0.08`); campos sem valor saem `null`.
 
+## GET /integrations/status — implementado (SW-3 / RF08)
+
+Estado da integração Shopee sem revelar segredo. Tipo do contrato em `@afflix/shared` (`IntegrationStatusResponse`).
+
+```json
+{ "data": { "shopee": { "mode": "live", "lastSuccessfulSyncAt": "2026-11-20T12:34:56.000Z" } } }
+```
+
+- `mode`: `live` só com `SHOPEE_MOCK_MODE=false` exato; qualquer outro valor é `mock`.
+- `lastSuccessfulSyncAt`: última chamada bem-sucedida à Shopee (busca ou link) desde que a api subiu. Fica em memória: `null` após reiniciar, até a primeira chamada OK. Em `mock` permanece `null`.
+- Nunca inclui App ID, secret, fragmento deles ou URL com credencial.
+
+## Resiliência da chamada à Shopee (SW-3 / RNF03)
+
+- Timeout de 15s por tentativa.
+- **Queries** (busca) repetem só em falha transitória: HTTP 429, 5xx, timeout, falha de rede e códigos GraphQL `10030` (limite) e `10000` (System Error da Shopee, equivalente a 5xx; observado na conta real em 20/11/2026). Backoff exponencial com jitter (500ms, 1s, 2s… teto 8s); `Retry-After` do 429 é respeitado e, acima de 30s, a api desiste na hora.
+- Teto de novas tentativas em `SHOPEE_MAX_RETRIES` (padrão 2, máximo 5, `0` desliga).
+- Nunca repetem: `10020` (autenticação), `10035` (sem acesso), outros 4xx e erros de schema.
+- A **mutation** `generateShortLink` nunca é repetida automaticamente (não é idempotente).
+- Mensagens públicas: `10020` → `502 Falha de autenticação com a Shopee`; `10035` → `502 Conta sem acesso à API da Shopee`; limite → `503`; `10000` após esgotar as tentativas → `502 Shopee indisponível no momento`. O código e a mensagem da Shopee vão só para o log da api.
+
 ## Rotas do backlog (não implementadas no scaffold)
 
 | Método | Endpoint | Regras |
@@ -98,7 +119,6 @@ Decimais saem como string na escala do schema (`"0.080000"`, nunca `0.08`); camp
 | GET | `/products/:id` | Retornar dados e último snapshot |
 | POST | `/products/:id/refresh` | Atualizar com fonte e horário, preservar snapshot |
 | GET | `/products/:id/history` | Preços/taxas anteriores com timezone UTC |
-| GET | `/integrations/shopee/status` | modo, acesso configurado, status, sem revelar segredo |
 | POST | `/media` | asset com origem, direitos, caminho e hash |
 | POST | `/publications` | rascunho com produto, mídia, canal |
 | PATCH | `/publications/:id` | transições e URL publicada manualmente |
