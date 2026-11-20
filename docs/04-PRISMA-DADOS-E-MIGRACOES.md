@@ -10,6 +10,7 @@ erDiagram
  PRODUCT ||--o{ AFFILIATE_LINK : gera
  PRODUCT ||--o{ PUBLICATION : promove
  MEDIA_ASSET ||--o{ PUBLICATION : participa
+ PUBLICATION ||--o{ PUBLICATION_METRIC : mede
 ```
 
 **Product** — marketplace, `shopId`, `itemId`, nome, URL, price, priceMax, commissionRate, estimatedCommission, rating, sales, syncedAt. Chave única composta evita duplicatas.
@@ -21,6 +22,8 @@ erDiagram
 **MediaAsset** — caminho da mídia, origem, hash, tipo de licença e evidência verificável de uso comercial.
 
 **Publication** — canal, draft, ready, publicado manualmente, arquivado, URL externa e data. Liga-se ao `AffiliateLink` que vai no briefing (`affiliateLinkId`, opcional, `ON DELETE SET NULL`) e guarda o `cta` (migration `publication_affiliate_link_cta`, SW-20).
+
+**PublicationMetric** — valor acumulado observado de uma publicação (RF11, migration `publication_metrics`, SW-24): `kind` (`VIEWS`, `CLICKS`, `ORDERS`, `COMMISSION`), `value` `Decimal(14,2)`, `source` (`MANUAL` ou `OFFICIAL_REPORT`), `sourceReference` e `observedAt`, todos `NOT NULL`. CHECK no banco: `value >= 0` e `sourceReference` não vazia. Registros não são editados; correção é um novo registro.
 
 ## Tipos e constraints
 

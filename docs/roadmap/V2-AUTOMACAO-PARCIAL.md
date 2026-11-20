@@ -8,6 +8,7 @@
 - Templates de copy e roteiros assistidos por IA com revisão humana.
 - Agendamento e publicação automática **somente onde APIs e aprovações permitirem** (Telegram como candidato inicial; Instagram sujeito às regras da Meta).
 - Logs de tentativas, estados `draft/ready/scheduled/published/failed` e reprocessamento idempotente.
+- Importar métricas do relatório oficial da Shopee Afiliados pela API autorizada (relatório de conversões), gravando como `OFFICIAL_REPORT` com referência ao relatório e data de observação. Na V1 (SW-23) esse número é digitado pelo operador. Pré-requisitos: confirmar na conta homologada a query de relatório e a atribuição por subId (pendência da SW-2), e respeitar cota e retry da SW-3. Sem scraping do painel.
 
 ## Não fazer
 Não automatizar Shopee Video ou TikTok por engenharia reversa ou bypass de restrições. Não publicar mídia sem direitos.

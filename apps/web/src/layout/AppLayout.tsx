@@ -1,8 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useProductSearch } from '../search/useProductSearch';
 
-// Telas do menu. Nova tela (Métricas): uma entrada aqui + uma <Route> no App.
-const NAV: { to:string; label:string }[] = [{ to:'/busca', label:'Buscar' }, { to:'/catalogo', label:'Catálogo' }, { to:'/midia', label:'Mídia' }, { to:'/publicacoes', label:'Publicações' }];
+// Telas do menu. Nova tela: uma entrada aqui + uma <Route> no App.
+const NAV: { to:string; label:string }[] = [{ to:'/busca', label:'Buscar' }, { to:'/catalogo', label:'Catálogo' }, { to:'/midia', label:'Mídia' }, { to:'/publicacoes', label:'Publicações' }, { to:'/metricas', label:'Métricas' }];
 
 export function AppLayout() {
   const search = useProductSearch();

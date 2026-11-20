@@ -83,6 +83,14 @@ api, web e shared. Migration `publication_affiliate_link_cta`: `Publication` gan
 - Atenção: um smoke por HTTP em modo live gerou 1 short link real na Shopee (`POST /affiliate-links`, 20/11/2026 19:09 UTC); o link ficou no catálogo.
 - Fora do escopo: métricas de publicação (RF11), excluir publicação, guardar no banco que o briefing foi exportado (o item do checklist vale só na sessão).
 
+## SW-23 — Métricas: registro e relatórios com fonte e timestamp (branch `feat/SW-23-metricas-relatorios`)
+api, web e shared. Migration nova `publication_metrics`; sem dependência nova nem variável de ambiente nova.
+- SW-24: model `PublicationMetric` (enums `MetricKind` e `MetricSource`), com `value Decimal(14,2)`, `source`, `sourceReference` e `observedAt` obrigatórios, mais CHECK de valor >= 0 e referência não vazia. Cada registro é o acumulado observado naquele instante.
+- SW-25: módulo `metrics` na api. `POST /publications/:id/metrics` (só publicação com `publishedAt`, senão `409`; contagem inteira, comissão até 2 casas, `observedAt` nem futuro nem anterior à publicação), `GET /publications/:id/metrics` (histórico) e `GET /metrics/report?groupBy=publication|product` (último acumulado por publicação, métrica e fonte; manual e oficial nunca somados; cada número com fonte, intervalo de observação e referências).
+- SW-26: tela `/metricas` (menu "Métricas"): formulário de registro (publicações publicadas, métrica, valor, fonte, referência e data de observação) e relatório por publicação ou por produto, com selo da fonte, data de observação e origem em cada linha, histórico por publicação e estados de carregando, vazio e erro.
+- Validado (20/11/2026): `pnpm test` 180/180 e `pnpm build` OK. Migration aplicada em banco limpo (banco temporário, `prisma migrate deploy` das 4 migrations) e no Postgres local via `pnpm --filter @afflix/api prisma:migrate`. api via `tsx` contra Postgres real: 409 em rascunho, 400 sem fonte/sem data/referência em branco/pedido fracionado/negativo/futuro/antes da publicação, 404 inexistente; 50→120 no mesmo canal vira 120 no relatório; 120 manual e 110 oficial em linhas separadas; por produto 120+30 = 150 com `n=2`. Tela no Edge headless (Playwright, rotas da Shopee bloqueadas): relatório nas duas visões, histórico, registro pela tela atualizando o relatório, erro da api exibido, contagem fracionada barrada no formulário; nenhum erro de JS da aplicação. Registros de teste e banco temporário removidos.
+- Fora do escopo: importar o relatório oficial da Shopee pela API (registrado no roadmap V2), editar ou excluir registro de métrica, filtros por período/canal no relatório, CTR calculado.
+
 ## Pendente
 - ~~Validar query GraphQL com acesso real aprovado pela Shopee.~~ Feito na SW-3 (busca). Atribuição dos subIds no painel segue pendente (SW-2).
 - Tabela "Estado atual do projeto" do `README.md` desatualizada desde a PR-001 (ainda marca banco e migrações como planejados).

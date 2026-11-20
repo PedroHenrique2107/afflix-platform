@@ -5,6 +5,7 @@ import { AffiliateLinksModule } from './affiliate-links/affiliate-links.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { MediaModule } from './media/media.module';
 import { PublicationsModule } from './publications/publications.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Controller('health')
 class HealthController {
@@ -12,5 +13,5 @@ class HealthController {
   status() { return { status: 'ok' }; }
 }
 
-@Module({ imports: [PrismaModule, DiscoveryModule, AffiliateLinksModule, IntegrationsModule, MediaModule, PublicationsModule], controllers: [HealthController] })
+@Module({ imports: [PrismaModule, DiscoveryModule, AffiliateLinksModule, IntegrationsModule, MediaModule, PublicationsModule, MetricsModule], controllers: [HealthController] })
 export class AppModule {}
