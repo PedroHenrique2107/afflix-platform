@@ -5,6 +5,7 @@
     "build":"tsc -p tsconfig.build.json",
     "start":"node dist/main.js",
     "test":"vitest run",
+    "shopee:homologar":"tsx scripts/shopee-homologacao.ts",
     "prisma:generate":"node --env-file-if-exists=../../.env ./node_modules/prisma/build/index.js generate",
     "prisma:migrate":"node --env-file-if-exists=../../.env ./node_modules/prisma/build/index.js migrate dev",
     "prisma:studio":"node --env-file-if-exists=../../.env ./node_modules/prisma/build/index.js studio"
