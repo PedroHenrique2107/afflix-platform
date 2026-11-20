@@ -101,5 +101,35 @@ model Publication {
   product        Product @relation(fields: [productId], references: [id])
   mediaAsset     MediaAsset? @relation(fields: [mediaAssetId], references: [id])
   affiliateLink  AffiliateLink? @relation(fields: [affiliateLinkId], references: [id])
+  metrics        PublicationMetric[]
   @@index([status, channel])
+}
+
+enum MetricKind {
+  VIEWS
+  CLICKS
+  ORDERS
+  COMMISSION
+}
+
+// Separa número anotado pelo operador de número tirado de relatório oficial (painel de afiliados, insights do canal).
+enum MetricSource {
+  MANUAL
+  OFFICIAL_REPORT
+}
+
+// Valor acumulado observado num instante (RF11): o relatório usa o último registro por publicação, métrica e fonte.
+// Fonte, referência da origem e data de observação são obrigatórias: nenhum número existe sem origem.
+model PublicationMetric {
+  id              String       @id @default(uuid()) @db.Uuid
+  publicationId   String       @db.Uuid
+  kind            MetricKind
+  // Contagens são inteiras; COMMISSION é BRL. Decimal único para não usar float em dinheiro.
+  value           Decimal      @db.Decimal(14, 2)
+  source          MetricSource
+  sourceReference String
+  observedAt      DateTime
+  createdAt       DateTime     @default(now())
+  publication     Publication  @relation(fields: [publicationId], references: [id])
+  @@index([publicationId, kind, source, observedAt])
 }
