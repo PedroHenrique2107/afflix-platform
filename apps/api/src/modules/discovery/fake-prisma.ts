@@ -7,11 +7,12 @@ type UniqueWhere = { marketplace_shopId_itemId: { marketplace: string; shopId: s
 
 // Prisma em memória só para testes unitários (a CI não tem banco). Imita o contrato usado pelos services:
 // upsert pela unique composta, snapshots, findMany por OR, count, $transaction (callback ou array)
-// e AffiliateLink com unique em dedupeKey (lança P2002 como o Prisma real).
+// AffiliateLink com unique em dedupeKey (lança P2002 como o Prisma real) e MediaAsset.
 export function createFakePrisma(options: { failFindMany?: boolean } = {}) {
   const products: Row[] = [];
   const snapshots: Row[] = [];
   const links: Row[] = [];
+  const media: Row[] = [];
   const same = (p: Row, k: UniqueWhere['marketplace_shopId_itemId']) =>
     p.marketplace === k.marketplace && p.shopId === k.shopId && p.itemId === k.itemId;
   const defined = (o: Row) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));
@@ -63,10 +64,35 @@ export function createFakePrisma(options: { failFindMany?: boolean } = {}) {
         return row;
       },
     },
+    mediaAsset: {
+      async findUnique(args: { where: { id: string } }) {
+        return media.find(m => m.id === args.where.id) ?? null;
+      },
+      async findFirst(args: { where: { sha256?: string } }) {
+        return media.find(m => args.where.sha256 === undefined || m.sha256 === args.where.sha256) ?? null;
+      },
+      async findMany(args: { skip?: number; take?: number }) {
+        const rows = [...media].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        return rows.slice(args.skip ?? 0, args.take === undefined ? undefined : (args.skip ?? 0) + args.take);
+      },
+      async count() {
+        return media.length;
+      },
+      async create(args: { data: Row }) {
+        const row = { id: randomUUID(), createdAt: new Date(), sha256: null, sourceUrl: null, rightsEvidence: null, licenseExpiresAt: null, ...defined(args.data) };
+        media.push(row);
+        return row;
+      },
+      async update(args: { where: { id: string }; data: Row }) {
+        const found = media.find(m => m.id === args.where.id);
+        if (!found) throw new Prisma.PrismaClientKnownRequestError('Record not found', { code: 'P2025', clientVersion: 'fake' });
+        return Object.assign(found, defined(args.data));
+      },
+    },
     async $transaction(arg: ((tx: Row) => Promise<unknown>) | Promise<unknown>[]) {
       return typeof arg === 'function' ? arg(api) : Promise.all(arg);
     },
   };
 
-  return { prisma: api as unknown as PrismaService, products, snapshots, links };
+  return { prisma: api as unknown as PrismaService, products, snapshots, links, media };
 }
