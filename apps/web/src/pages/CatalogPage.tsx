@@ -1,32 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { CatalogProduct, ListProductsResponse } from '@afflix/shared';
-import { errorMessage, getJson } from './api';
-import { AffiliateLinkForm } from './AffiliateLinkForm';
+import { useNavigate } from 'react-router-dom';
+import type { ListProductsResponse } from '@afflix/shared';
+import { errorMessage } from '../api/client';
+import { listProducts } from '../api/products';
+import { CatalogCard } from '../components/CatalogCard';
 
 const PAGE_SIZE = 12;
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' });
-
-function CatalogCard({ product }: { product: CatalogProduct }) {
-  return <article className="card">
-    <div className="thumb">▦</div>
-    <div className="info">
-      <h3>{product.name}</h3>
-      <p>Preço: {product.price?`R$ ${product.price}`:'não informado'}</p>
-      <p>Comissão: {product.commissionPercent?<strong>{product.commissionPercent}%</strong>:'não informada'}</p>
-      <p>Avaliação: {product.rating??'não informada'}</p>
-      <p className="synced-at">Sincronizado em {formatDate(product.lastSyncedAt)}</p>
-      <a href={product.productUrl} target="_blank" rel="noopener noreferrer">Ver produto</a>
-      <AffiliateLinkForm resolveProductId={async () => product.id} />
-    </div>
-  </article>;
-}
-
-type Props = { onGoToSearch: () => void };
-
-// Catálogo persistido (GET /api/v1/products): mais recente primeiro, sem arquivados — ordem e filtro são da api.
-export function CatalogPage({ onGoToSearch }: Props) {
+// Catálogo persistido: mais recente primeiro, sem arquivados — ordem e filtro são da api (listProducts).
+export function CatalogPage() {
+  const navigate = useNavigate();
   const [page,setPage] = useState(1);
   const [result,setResult] = useState<ListProductsResponse|null>(null);
   const [error,setError] = useState('');
@@ -35,8 +18,7 @@ export function CatalogPage({ onGoToSearch }: Props) {
   const load = useCallback(async (target: number) => {
     setLoading(true); setError('');
     try {
-      const qs = new URLSearchParams({ page:String(target), limit:String(PAGE_SIZE) });
-      setResult(await getJson<ListProductsResponse>(`/api/v1/products?${qs.toString()}`));
+      setResult(await listProducts(target, PAGE_SIZE));
     } catch (err) {
       setError(errorMessage(err)); setResult(null);
     } finally {
@@ -67,7 +49,7 @@ export function CatalogPage({ onGoToSearch }: Props) {
     {!error && meta?.total === 0 && <div className="catalog-state">
       <p>Nenhum produto salvo ainda.</p>
       <p className="hint">Busque ofertas e use “Salvar no catálogo” para montar sua lista.</p>
-      <button type="button" onClick={onGoToSearch}>Ir para a busca</button>
+      <button type="button" onClick={()=>navigate('/busca')}>Ir para a busca</button>
     </div>}
 
     {!error && result && result.data.length > 0 && <>

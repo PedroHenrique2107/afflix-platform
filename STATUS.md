@@ -58,6 +58,14 @@ Só `apps/web` e tipos em `packages/shared`; api e banco sem mudança (consome o
 - Validado (20/11/2026): `pnpm build` OK e `pnpm test` 96/96 a cada subtask. No navegador (Playwright contra `pnpm dev`, modo live, sem gerar link real): salvar 3→4 produtos e 3→4 snapshots; botão desabilitado não reimporta; `saved` volta do banco numa nova busca; catálogo na ordem da api; paginação real com `limit` 2; vazio e erro com resposta simulada; "Gerar link" envia o `productId` certo sem reimportar.
 - Limitações: o `apps/web` não tem testes automatizados (sem vitest); produto salvo em modo mock aparece no catálogo com URL fictícia, porque o banco não guarda a origem (mock/live).
 
+## SW-15 — Frontend: quebra do App.tsx em rotas e componentes (branch `refactor/SW-15-quebra-app-tsx`)
+Só `apps/web`; api, banco e shared sem mudança. Refactor sem mudança funcional, preparando as telas de Mídia, Publicação e Métricas.
+- Navegação com `react-router-dom` (dependência nova): `/busca` e `/catalogo`; `/` e rota desconhecida redirecionam para `/busca`. Menu em `layout/AppLayout.tsx` (nova tela = entrada no `NAV` + `<Route>` no `App.tsx`).
+- Estado da busca em `search/useProductSearch.ts`, mantido no layout e repassado por `<Outlet context>`: a busca sobrevive à troca de tela, o catálogo recarrega ao abrir (igual às abas da SW-12).
+- Chamadas HTTP só em `src/api/` (`client.ts`, `products.ts`, `affiliateLinks.ts`); páginas em `pages/`, componentes em `components/` (`SearchForm` e `CatalogCard` extraídos). Maior arquivo do web: 73 linhas (teto adotado: 350).
+- Validado (20/11/2026): `pnpm test` 96/96 e `pnpm build` OK. No navegador (Playwright + Edge contra `pnpm dev`, modo live, só leitura): `/` → `/busca`, busca com 20 resultados, navegação para o catálogo (4 produtos, paginação), volta para a busca mantendo os resultados, botão voltar, F5 em `/catalogo` e rota desconhecida → `/busca`; nenhuma requisição de escrita e nenhum erro de JS.
+- Fora do escopo, observado: `/favicon.ico` responde 404 (já acontecia antes).
+
 ## Pendente
 - ~~Validar query GraphQL com acesso real aprovado pela Shopee.~~ Feito na SW-3 (busca). Atribuição dos subIds no painel segue pendente (SW-2).
 - Implementar publicações manuais em PRs futuras.

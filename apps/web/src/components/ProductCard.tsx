@@ -1,26 +1,8 @@
 import { useState } from 'react';
-import type { ImportProductsResponse } from '@afflix/shared';
-import { errorMessage, postJson } from './api';
+import { errorMessage } from '../api/client';
+import { importOffer } from '../api/products';
+import type { Offer } from '../api/products';
 import { AffiliateLinkForm } from './AffiliateLinkForm';
-
-export type Offer = {
-  marketplace:'SHOPEE'; itemId:string; shopId:string; name:string; productUrl:string;
-  offerUrl?:string; imageUrl?:string; price?:string; priceMax?:string; commissionRate?:string;
-  estimatedCommission?:string; rating?:string; sales?:number;
-  commissionPercent:string; saved:boolean; productId:string|null;
-};
-
-// O import recusa campos desconhecidos: envia só os campos da oferta, sem os calculados pela busca.
-function toImportOffer(o: Offer) {
-  const { commissionPercent: _c, saved: _s, productId: _p, ...offer } = o;
-  return offer;
-}
-
-// Upsert no catálogo: reimportar a mesma oferta atualiza o produto existente, nunca duplica.
-async function importOffer(offer: Offer): Promise<string> {
-  const imported = await postJson<ImportProductsResponse>('/api/v1/products/import', { offers:[toImportOffer(offer)] });
-  return imported.data.items[0].id;
-}
 
 type Props = { offer:Offer; source:string; onSaved:(productId:string)=>void };
 

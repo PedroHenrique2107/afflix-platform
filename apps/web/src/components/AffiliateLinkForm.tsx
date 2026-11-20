@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { AFFILIATE_CHANNELS, CAMPAIGN_MAX_LENGTH } from '@afflix/shared';
 import type { AffiliateChannel, AffiliateLinkView, CreateAffiliateLinkRequest, CreateAffiliateLinkResponse } from '@afflix/shared';
-import { errorMessage, postJson } from './api';
+import { errorMessage } from '../api/client';
+import { createAffiliateLink } from '../api/affiliateLinks';
 
 // Rótulo de exibição; a lista de valores válidos vem do @afflix/shared.
 const CHANNEL_LABEL: Record<AffiliateChannel,string> = {
@@ -28,7 +29,7 @@ export function AffiliateLinkForm({ resolveProductId }: Props) {
     try {
       const productId = await resolveProductId();
       const body: CreateAffiliateLinkRequest = { productId, channel, ...(campaign.trim() ? { campaign:campaign.trim() } : {}) };
-      const result = await postJson<CreateAffiliateLinkResponse>('/api/v1/affiliate-links', body);
+      const result = await createAffiliateLink(body);
       setLink(result.data); setLinkMeta(result.meta);
       setStatus(await copy(result.data.shortUrl) ? 'copied' : 'copy-failed');
     } catch (err) {
