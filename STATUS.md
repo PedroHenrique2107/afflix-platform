@@ -49,9 +49,20 @@
 - Validado (20/11/2026): `pnpm test` 96/96, `pnpm build` OK. Com `SHOPEE_MOCK_MODE=false` e Postgres real (teste do Pedro): status `live`/`null` → busca com 3 ofertas reais (`source: "shopee"`) → status com `lastSuccessfulSyncAt` preenchido. Shopee devolveu `10000 System Error` numa tentativa (body idêntico ao do script que funcionou) — motivou incluir 10000 no retry.
 - Observação fora do escopo: a api não sobe sem Postgres (`PrismaService.onModuleInit`), embora a busca tolere banco indisponível.
 
+## SW-11 — Catálogo: produtos salvos na interface (branch `feat/SW-11-catalogo-interface`)
+Só `apps/web` e tipos em `packages/shared`; api e banco sem mudança (consome os endpoints da SW-1).
+- SW-13: botão "Salvar no catálogo" no card da busca (`POST /products/import`), com feedback de sucesso e de erro. Reimportar não duplica (upsert da SW-1).
+- SW-14: produto já salvo fica destacado (borda + selo "✓ No catálogo") e a ação de salvar vira "✓ Salvo no catálogo" desabilitado, evitando reimport e `PriceSnapshot` extra.
+- SW-12: abas Buscar/Catálogo (estado, sem roteador; a busca sobrevive à troca de aba). Catálogo via `GET /products`, 12 por página, com estados de carregando, vazio ("Ir para a busca") e erro ("Tentar novamente"). Card do catálogo mostra sincronização e gera link de afiliado direto pelo `productId`.
+- Formulário de link extraído para `AffiliateLinkForm` (busca e catálogo) e chamadas HTTP centralizadas em `apps/web/src/api.ts`. Contrato novo no shared: `ImportProductsResponse`, `CatalogProduct`, `ListProductsResponse`.
+- Validado (20/11/2026): `pnpm build` OK e `pnpm test` 96/96 a cada subtask. No navegador (Playwright contra `pnpm dev`, modo live, sem gerar link real): salvar 3→4 produtos e 3→4 snapshots; botão desabilitado não reimporta; `saved` volta do banco numa nova busca; catálogo na ordem da api; paginação real com `limit` 2; vazio e erro com resposta simulada; "Gerar link" envia o `productId` certo sem reimportar.
+- Limitações: o `apps/web` não tem testes automatizados (sem vitest); produto salvo em modo mock aparece no catálogo com URL fictícia, porque o banco não guarda a origem (mock/live).
+
 ## Pendente
 - ~~Validar query GraphQL com acesso real aprovado pela Shopee.~~ Feito na SW-3 (busca). Atribuição dos subIds no painel segue pendente (SW-2).
 - Implementar publicações manuais em PRs futuras.
+- Tabela "Estado atual do projeto" do `README.md` desatualizada desde a PR-001 (ainda marca banco e migrações como planejados).
+- Infra de testes no `apps/web` (vitest + testing-library) para cobrir busca e catálogo.
 - Avaliar extensão do mesmo padrão explícito (`@Inject`) a outros módulos que venham a ser criados, enquanto o dev runner continuar sendo `tsx`.
 - Push/PR não realizados (aguardando autorização do usuário).
 
