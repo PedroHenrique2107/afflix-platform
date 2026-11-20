@@ -51,3 +51,29 @@ export type ImportedProductRef = { id: string; marketplace: Marketplace; shopId:
 export type ImportProductsResponse = {
   data: { created: number; updated: number; total: number; items: ImportedProductRef[] };
 };
+
+// GET /api/v1/products. Decimais como string com escala fixa; datas em ISO 8601. Campo ausente na origem vem null.
+export type CatalogProduct = {
+  id: string;
+  marketplace: Marketplace;
+  shopId: string;
+  itemId: string;
+  name: string;
+  productUrl: string;
+  offerUrl: string | null;
+  imageUrl: string | null;
+  price: string | null;
+  priceMax: string | null;
+  commissionRate: string | null; // 0.080000 = 8%
+  commissionPercent: string | null; // "8.00"
+  estimatedCommission: string | null;
+  rating: string | null;
+  sales: number | null;
+  lastSyncedAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
+export type ListProductsResponse = {
+  data: CatalogProduct[];
+  meta: { page: number; limit: number; total: number; hasNextPage: boolean };
+};
