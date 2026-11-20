@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AFFILIATE_CHANNELS, CAMPAIGN_MAX_LENGTH } from '@afflix/shared';
-import type { AffiliateChannel, AffiliateLinkView, CreateAffiliateLinkRequest, CreateAffiliateLinkResponse } from '@afflix/shared';
+import type { AffiliateChannel, AffiliateLinkView, CreateAffiliateLinkRequest, CreateAffiliateLinkResponse, ImportProductsResponse } from '@afflix/shared';
 
 export type Offer = {
   marketplace:'SHOPEE'; itemId:string; shopId:string; name:string; productUrl:string;
@@ -30,6 +30,12 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   return json as T;
 }
 
+// Upsert no catálogo: reimportar a mesma oferta atualiza o produto existente, nunca duplica.
+async function importOffer(offer: Offer): Promise<string> {
+  const imported = await postJson<ImportProductsResponse>('/api/v1/products/import', { offers:[toImportOffer(offer)] });
+  return imported.data.items[0].id;
+}
+
 async function copy(text: string): Promise<boolean> {
   try { await navigator.clipboard.writeText(text); return true; } catch { return false; }
 }
@@ -43,14 +49,25 @@ export function ProductCard({ offer, source, onSaved }: Props) {
   const [linkMeta,setLinkMeta] = useState<CreateAffiliateLinkResponse['meta']|null>(null);
   const [status,setStatus] = useState<'idle'|'loading'|'copied'|'copy-failed'>('idle');
   const [error,setError] = useState('');
+  const [saveStatus,setSaveStatus] = useState<'idle'|'saving'|'saved'>('idle');
+  const [saveError,setSaveError] = useState('');
+
+  async function save() {
+    setSaveStatus('saving'); setSaveError('');
+    try {
+      onSaved(await importOffer(offer));
+      setSaveStatus('saved');
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Falha desconhecida'); setSaveStatus('idle');
+    }
+  }
 
   async function generate() {
     setStatus('loading'); setError(''); setLink(null);
     try {
       let productId = offer.productId;
       if (!productId) {
-        const imported = await postJson<{ data:{ items:{ id:string }[] } }>('/api/v1/products/import', { offers:[toImportOffer(offer)] });
-        productId = imported.data.items[0].id;
+        productId = await importOffer(offer);
         onSaved(productId);
       }
       const body: CreateAffiliateLinkRequest = { productId, channel, ...(campaign.trim() ? { campaign:campaign.trim() } : {}) };
@@ -66,15 +83,25 @@ export function ProductCard({ offer, source, onSaved }: Props) {
     if (link) setStatus(await copy(link.shortUrl) ? 'copied' : 'copy-failed');
   }
 
-  return <article className="card">
-    <div className="thumb">▦</div>
+  return <article className={offer.saved ? 'card saved' : 'card'}>
+    <div className="thumb">▦{offer.saved && <span className="saved-badge">✓ No catálogo</span>}</div>
     <div className="info">
       <h3>{offer.name}</h3>
       <p>Preço: {offer.price?`R$ ${offer.price}`:'não informado'}</p>
       <p>Comissão: <strong>{offer.commissionPercent}%</strong></p>
       <p>Avaliação: {offer.rating??'não informada'}</p>
-      {offer.saved && <p className="saved-tag">✓ Salvo no catálogo</p>}
       {source !== 'mock' && <a href={offer.productUrl} target="_blank" rel="noopener noreferrer">Ver produto</a>}
+
+      <div className="save-action">
+        {/* Já no catálogo: a ação some para não reimportar (cada import grava um PriceSnapshot). */}
+        {offer.saved
+          ? <button type="button" className="secondary" disabled>✓ Salvo no catálogo</button>
+          : <button type="button" className="secondary" onClick={()=>void save()} disabled={saveStatus==='saving'}>
+              {saveStatus==='saving'?'Salvando...':'Salvar no catálogo'}
+            </button>}
+        {saveStatus==='saved' && <p className="save-status" role="status">Produto salvo no catálogo.</p>}
+        {saveError && <p className="error" role="alert">Não foi possível salvar: {saveError}</p>}
+      </div>
 
       <div className="link-form">
         <label>Canal

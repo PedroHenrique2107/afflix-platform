@@ -45,3 +45,9 @@ export type CreateAffiliateLinkResponse = {
   // reused=true: já existia link para o mesmo produto+canal+campanha+subIds e nada foi gerado na Shopee.
   meta: { reused: boolean; source: 'mock' | 'shopee' };
 };
+
+// POST /api/v1/products/import. Upsert idempotente: reimportar conta em updated, nunca duplica.
+export type ImportedProductRef = { id: string; marketplace: Marketplace; shopId: string; itemId: string };
+export type ImportProductsResponse = {
+  data: { created: number; updated: number; total: number; items: ImportedProductRef[] };
+};
