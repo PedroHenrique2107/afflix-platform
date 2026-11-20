@@ -91,11 +91,18 @@ api, web e shared. Migration nova `publication_metrics`; sem dependência nova n
 - Validado (20/11/2026): `pnpm test` 180/180 e `pnpm build` OK. Migration aplicada em banco limpo (banco temporário, `prisma migrate deploy` das 4 migrations) e no Postgres local via `pnpm --filter @afflix/api prisma:migrate`. api via `tsx` contra Postgres real: 409 em rascunho, 400 sem fonte/sem data/referência em branco/pedido fracionado/negativo/futuro/antes da publicação, 404 inexistente; 50→120 no mesmo canal vira 120 no relatório; 120 manual e 110 oficial em linhas separadas; por produto 120+30 = 150 com `n=2`. Tela no Edge headless (Playwright, rotas da Shopee bloqueadas): relatório nas duas visões, histórico, registro pela tela atualizando o relatório, erro da api exibido, contagem fracionada barrada no formulário; nenhum erro de JS da aplicação. Registros de teste e banco temporário removidos.
 - Fora do escopo: importar o relatório oficial da Shopee pela API (registrado no roadmap V2), editar ou excluir registro de métrica, filtros por período/canal no relatório, CTR calculado.
 
+## SW-29 — Runner da API: `tsx` mantido, `@Inject` explícito verificado por teste (branch `chore/SW-29-avaliar-runner-tsx`)
+Só api e docs; sem dependência nova, variável de ambiente nova ou mudança de runtime.
+- Decisão em `docs/architecture/ADR-002-runner-tsx-inject-explicito.md`: `tsx`, `ts-node` e `nest start` comparados. Mantido o `tsx`, porque o `vitest` também usa esbuild: trocar só o runner de dev não daria metadata aos testes e faria dev e testes divergirem.
+- Reproduzido: sem `@Inject`, no `tsx` o Nest injeta `undefined` e a API sobe normalmente; com `tsc` + `node` injeta certo.
+- `apps/api/src/modules/app.module.di.spec.ts` percorre os módulos a partir do `AppModule` e falha se algum controller/provider tiver parâmetro de construtor sem `@Inject`, ou se uma `useFactory` tiver menos `inject` do que parâmetros.
+- Validado (20/11/2026): `pnpm test` 195/195, `pnpm build` e `pnpm lint` OK (api 9 warnings, no teto). Com o `@Inject` do `MetricsService` removido de propósito, o teste falha apontando `MetricsModule > MetricsService: parâmetro(s) 0`. A api em `tsx` respondeu `/health`.
+
 ## Pendente
 - ~~Validar query GraphQL com acesso real aprovado pela Shopee.~~ Feito na SW-3 (busca). Atribuição dos subIds no painel segue pendente (SW-2).
 - Tabela "Estado atual do projeto" do `README.md` desatualizada desde a PR-001 (ainda marca banco e migrações como planejados).
 - Infra de testes no `apps/web` (vitest + testing-library) para cobrir busca e catálogo.
-- Avaliar extensão do mesmo padrão explícito (`@Inject`) a outros módulos que venham a ser criados, enquanto o dev runner continuar sendo `tsx`.
+- ~~Avaliar extensão do mesmo padrão explícito (`@Inject`) a outros módulos que venham a ser criados, enquanto o dev runner continuar sendo `tsx`.~~ Resolvido na SW-29 (ADR-002 + teste de DI).
 - Push/PR não realizados (aguardando autorização do usuário).
 
 Ver `docs/PR-001-IMPLEMENTACAO.md` e `docs/EXECUCAO-LOCAL-E-CLAUDE-CODE.md`.
