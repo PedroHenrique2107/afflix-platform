@@ -66,6 +66,14 @@ Só `apps/web`; api, banco e shared sem mudança. Refactor sem mudança funciona
 - Validado (20/11/2026): `pnpm test` 96/96 e `pnpm build` OK. No navegador (Playwright + Edge contra `pnpm dev`, modo live, só leitura): `/` → `/busca`, busca com 20 resultados, navegação para o catálogo (4 produtos, paginação), volta para a busca mantendo os resultados, botão voltar, F5 em `/catalogo` e rota desconhecida → `/busca`; nenhuma requisição de escrita e nenhum erro de JS.
 - Fora do escopo, observado: `/favicon.ico` responde 404 (já acontecia antes).
 
+## SW-16 — Mídia: biblioteca com licença e proveniência (branch `feat/SW-16-biblioteca-midia`)
+api, web e shared; sem migration (o model `MediaAsset` já existia) e sem dependência nova.
+- SW-17: módulo `media` na api. `POST /api/v1/media` (multipart, só vídeo, até 500 MB) com `licenseType` obrigatório e SHA-256 calculado em stream pela api, nunca recebido do cliente; `GET /api/v1/media` paginado; `PATCH /api/v1/media/:id` só de metadados. Arquivo salvo como `<sha256>.<ext>` em `MEDIA_STORAGE_DIR` (variável opcional, padrão `data/media`, ignorado pelo Git) atrás de um adaptador de storage (ADR-006). Mesmo arquivo duas vezes → `409`; erro em qualquer etapa apaga o arquivo enviado.
+- Regra "sem prova de licença não entra em publicação": `licenseStatus` (`VALID`/`MISSING_EVIDENCE`/`EXPIRED`) + `publishable` em cada asset e `assertMediaPublishable()` pronta para o futuro módulo de publicações (não há endpoint de publicação ainda).
+- SW-18: tela `/midia` (menu "Mídia") com formulário de cadastro e listagem mostrando tipo de licença, validade (vencida em vermelho), origem, prova, hash e selo de status; estados de carregando, vazio e erro; paginação.
+- Validado (20/11/2026): `pnpm test` 114/114 e `pnpm build` OK. api via `tsx` contra Postgres real: hash gravado igual ao `sha256sum` local; 400 sem `licenseType`, com `sha256` do cliente, arquivo não vídeo e sem arquivo; 409 duplicado; PATCH com prova muda o status para `VALID`; pasta temporária vazia após os erros. Tela conferida no Edge headless (lista com asset publicável e bloqueado, estado vazio). Registros de teste removidos do banco.
+- Fora do escopo: editar metadados pela tela (a api já tem o PATCH), excluir asset, player/preview do vídeo.
+
 ## Pendente
 - ~~Validar query GraphQL com acesso real aprovado pela Shopee.~~ Feito na SW-3 (busca). Atribuição dos subIds no painel segue pendente (SW-2).
 - Implementar publicações manuais em PRs futuras.
