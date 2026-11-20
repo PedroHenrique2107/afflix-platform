@@ -194,6 +194,34 @@ Download `text/plain; charset=utf-8` (`Content-Disposition: attachment`, `briefi
 
 Lista paginada (`page`, `limit` 1–50, `status` opcional), ordenada pela última alteração. Mesmo `meta` do `GET /products`.
 
+## Métricas de publicação — implementado (SW-23 / RF11)
+
+Tipos em `@afflix/shared` (`RecordPublicationMetricRequest`, `PublicationMetricView`, `MetricsReportResponse`). Cada registro é o **valor acumulado observado** num instante, sempre com fonte, referência da origem e data de observação.
+
+- `kind`: `VIEWS`, `CLICKS`, `ORDERS` (pedidos atribuídos) ou `COMMISSION` (BRL). Contagens são inteiras; comissão tem até 2 casas.
+- `source`: `MANUAL` (anotado pelo operador) ou `OFFICIAL_REPORT` (transcrito de relatório oficial: painel de afiliados, insights do canal). Na V1 os dois são digitados; a importação automática do relatório da Shopee está no roadmap da V2.
+- `value` é serializado como string decimal (`"120"`, `"4.35"`).
+
+### POST /publications/:id/metrics
+
+Body: `kind`, `value` (número ou string, >= 0), `source`, `sourceReference` (3–200 caracteres, de onde o número saiu), `observedAt` (`YYYY-MM-DD` ou ISO 8601). Todos obrigatórios. Resposta `201 { data: PublicationMetricView }`.
+
+- `404` publicação inexistente; `409` publicação sem `publishedAt` (só publicação já publicada recebe métrica).
+- `400` campo ausente, fonte fora da lista, referência em branco, valor negativo ou com mais de 2 casas, contagem fracionada, `observedAt` no futuro ou anterior à publicação (data sem hora compara pelo dia).
+
+### GET /publications/:id/metrics
+
+Histórico completo da publicação, mais recente primeiro (`observedAt` e, no empate, o registro mais novo). `404` se a publicação não existir.
+
+### GET /metrics/report?groupBy=publication|product
+
+Relatório agregado. Para cada publicação vale o **último** registro por métrica e fonte (somar o histórico contaria em dobro). `groupBy=product` soma esse último valor das publicações do produto.
+
+- Manual e relatório oficial ficam em células separadas e **nunca são somados**.
+- Cada célula traz `value`, `source`, `publicationCount`, `observedAt` (observação mais recente), `oldestObservedAt` (mais antiga) e `sourceReferences`.
+- Só aparecem combinações com registro: nenhum número sem origem, nenhum zero inventado.
+- `400` sem `groupBy` ou com valor fora da lista. Agregação em memória, dimensionada para o volume do MVP.
+
 ## Rotas do backlog (não implementadas no scaffold)
 
 | Método | Endpoint | Regras |
