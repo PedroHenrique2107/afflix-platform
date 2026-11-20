@@ -28,6 +28,8 @@ Exemplo fictício:
 
 O campo `saved` agora reflete o catálogo persistido (`true` se `[marketplace, shopId, itemId]` já existe em `Product`). Se o banco estiver indisponível, a busca continua funcionando e devolve `saved:false` (aviso no log).
 
+`productId` (SW-2): id do produto no catálogo quando `saved:true`, `null` caso contrário. Permite gerar link sem reimportar.
+
 ## POST /products/import — implementado (SW-1)
 
 Importa ofertas selecionadas para o catálogo, com upsert idempotente pela unique `[marketplace, shopId, itemId]`. Cada oferta grava produto e `PriceSnapshot` (preço e comissão observados) na mesma transação.
@@ -43,10 +45,38 @@ Body: `{ "offers": Offer[] }`, de 1 a 50 ofertas.
 Resposta `200`:
 
 ```json
-{ "data": { "created": 1, "updated": 1, "total": 2 } }
+{ "data": { "created": 1, "updated": 1, "total": 2,
+  "items": [{ "id": "…", "marketplace": "SHOPEE", "shopId": "456", "itemId": "123" }] } }
 ```
 
+`items` (SW-2, campo adicional): um registro por produto distinto do lote, com o `id` do catálogo.
+
 Cada oferta é transacional por si; se uma falhar, as anteriores do lote já foram gravadas. Como o upsert é idempotente, repetir o lote é seguro.
+
+## POST /affiliate-links — implementado (SW-2)
+
+Gera link de afiliado rastreável para um produto do catálogo e persiste em `AffiliateLink`. Tipos do contrato em `@afflix/shared` (`CreateAffiliateLinkRequest`, `CreateAffiliateLinkResponse`).
+
+Body:
+
+- `productId` (UUID, obrigatório): produto do catálogo, não arquivado.
+- `channel` (obrigatório): um de `AFFILIATE_CHANNELS` (`INSTAGRAM`, `TIKTOK`, `SHOPEE_VIDEO`, `TELEGRAM`).
+- `campaign` (opcional): até 60 caracteres; só espaços equivale a ausente.
+- `subIds` (opcional): até 5, cada um alfanumérico de 1 a 50 caracteres. Ausente: derivados de canal e campanha (`["instagram","natal2026"]`). **Limites a confirmar na conta homologada.**
+
+Resposta `200`:
+
+```json
+{ "data": { "id":"…","productId":"…","channel":"INSTAGRAM","campaign":"Natal 2026",
+  "subIds":["instagram","natal2026"],"shortUrl":"https://link-ficticio.invalid/51f1f26ff04b","createdAt":"…" },
+  "meta": { "reused": false, "source": "mock" } }
+```
+
+- **Idempotência:** `dedupeKey` único = sha256 de `source+productId+channel+campaign+subIds`. Pedido igual devolve o registro existente com `reused:true`, sem chamar a Shopee. Em corrida, a segunda requisição devolve o registro vencedor.
+- A mutation `generateShortLink` é chamada **uma vez**, sem retry automático.
+- Origem do link: só `https` em `shopee.com.br` ou subdomínio; fora disso `409`. `shortUrl` da Shopee só é aceito em host da Shopee (`502` caso contrário).
+- Modo mock: link fictício em `link-ficticio.invalid` (domínio reservado, nunca resolve), `source:"mock"`. A fonte entra na chave, então link mock nunca é reaproveitado no live.
+- Erros: `400` validação, `404` produto inexistente/arquivado, `409` origem não permitida, `502`/`503` Shopee.
 
 ## GET /products — implementado (SW-1)
 
@@ -68,7 +98,6 @@ Decimais saem como string na escala do schema (`"0.080000"`, nunca `0.08`); camp
 | GET | `/products/:id` | Retornar dados e último snapshot |
 | POST | `/products/:id/refresh` | Atualizar com fonte e horário, preservar snapshot |
 | GET | `/products/:id/history` | Preços/taxas anteriores com timezone UTC |
-| POST | `/affiliate-links` | `productId,channel,campaign,subIds`; validar URL de origem permitida |
 | GET | `/integrations/shopee/status` | modo, acesso configurado, status, sem revelar segredo |
 | POST | `/media` | asset com origem, direitos, caminho e hash |
 | POST | `/publications` | rascunho com produto, mídia, canal |

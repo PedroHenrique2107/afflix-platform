@@ -35,12 +35,12 @@ query SearchOffers($keyword: String!, $page: Int!, $limit: Int!) {
 ```
 
 ```graphql
-mutation GenerateLink($input: GenerateShortLinkInput!) {
-  generateShortLink(input:$input) { shortLink }
+mutation GenerateLink($originUrl: String!, $subIds: [String!]) {
+  generateShortLink(input: { originUrl: $originUrl, subIds: $subIds }) { shortLink }
 }
 ```
 
-Confirme `GenerateShortLinkInput`, limites dos `subIds`, quotas e campos disponibilizados antes da mutation real. Campos não permitidos à conta podem produzir `errors` no GraphQL.
+O schema real **não expõe** o tipo `GenerateShortLinkInput` (erro `10010 Unknown type`, observado em 18/11/2026): monte o input inline com variáveis escalares, como acima. `subIds` é `[String!]` no schema (com `[String]` volta `10010`). Confirme limites dos `subIds`, quotas e campos disponibilizados antes da mutation real. Campos não permitidos à conta podem produzir `errors` no GraphQL.
 
 ## Testes mandatórios antes do live
 

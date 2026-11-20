@@ -35,33 +35,41 @@ export class DiscoveryService {
       within(p.price, dto.minPrice, dto.maxPrice) &&
       within(p.rating, dto.minRating)
     );
-    const saved = await this.findSavedKeysSafely(filtered);
-    const data = filtered.map(p => ({
-      ...p,
-      commissionPercent: new Decimal(p.commissionRate!).mul(100).toFixed(2),
-      saved: saved.has(productKey(p)),
-    }));
+    const saved = await this.findSavedIdsSafely(filtered);
+    const data = filtered.map(p => {
+      const productId = saved.get(productKey(p)) ?? null;
+      return {
+        ...p,
+        commissionPercent: new Decimal(p.commissionRate!).mul(100).toFixed(2),
+        saved: productId !== null,
+        productId, // id no catálogo quando salvo: o web usa para gerar link sem reimportar
+      };
+    });
     return {data, meta:{...found.pageInfo, source:found.source}};
   }
 
   // Importa ofertas no catálogo: upsert idempotente + um PriceSnapshot por importação, atômicos por oferta.
   async importOffers(dto: ImportProductsDto) {
-    const existing = await this.findSavedKeys(dto.offers);
+    const existing = await this.findSavedIds(dto.offers);
+    const ids = new Map<string, ProductKey & { id: string }>();
     let created = 0;
     let updated = 0;
     for (const offer of dto.offers) {
-      const { where, create, update, snapshot } = offerToProductData(offer);
-      await this.prisma.$transaction(async tx => {
-        const product = await tx.product.upsert({ where, create, update });
+      const { key: productKeyFields, where, create, update, snapshot } = offerToProductData(offer);
+      const product = await this.prisma.$transaction(async tx => {
+        const row = await tx.product.upsert({ where, create, update });
         await tx.priceSnapshot.create({
-          data: { productId: product.id, price: snapshot.price, commissionRate: snapshot.commissionRate },
+          data: { productId: row.id, price: snapshot.price, commissionRate: snapshot.commissionRate },
         });
+        return row;
       });
       const key = productKey(offer);
       if (existing.has(key)) updated++;
-      else { created++; existing.add(key); } // mesma oferta repetida no lote conta como atualização
+      else { created++; existing.set(key, product.id); } // mesma oferta repetida no lote conta como atualização
+      ids.set(key, { id: product.id, ...productKeyFields });
     }
-    return { data: { created, updated, total: dto.offers.length } };
+    // items: um por produto distinto do lote, para o cliente usar o id (ex.: gerar link de afiliado).
+    return { data: { created, updated, total: dto.offers.length, items: [...ids.values()] } };
   }
 
   async listProducts(dto: ListProductsDto) {
@@ -81,23 +89,23 @@ export class DiscoveryService {
     };
   }
 
-  // Consulta em lote quais [marketplace, shopId, itemId] já existem no catálogo.
-  private async findSavedKeys(items: ProductKey[]): Promise<Set<string>> {
-    if (items.length === 0) return new Set();
+  // Consulta em lote quais [marketplace, shopId, itemId] já existem no catálogo. Chave -> id do produto.
+  private async findSavedIds(items: ProductKey[]): Promise<Map<string, string>> {
+    if (items.length === 0) return new Map();
     const rows = await this.prisma.product.findMany({
       where: { OR: items.map(({ marketplace, shopId, itemId }) => ({ marketplace, shopId, itemId })) },
-      select: { marketplace: true, shopId: true, itemId: true },
+      select: { id: true, marketplace: true, shopId: true, itemId: true },
     });
-    return new Set(rows.map(productKey));
+    return new Map(rows.map(r => [productKey(r), r.id]));
   }
 
   // A busca não pode cair só porque o banco está indisponível: sem catálogo, saved fica false.
-  private async findSavedKeysSafely(items: Offer[]): Promise<Set<string>> {
+  private async findSavedIdsSafely(items: Offer[]): Promise<Map<string, string>> {
     try {
-      return await this.findSavedKeys(items);
+      return await this.findSavedIds(items);
     } catch (error) {
       this.logger.warn(`Catálogo indisponível, saved=false nesta busca: ${error instanceof Error ? error.message : 'erro desconhecido'}`);
-      return new Set();
+      return new Map();
     }
   }
 }

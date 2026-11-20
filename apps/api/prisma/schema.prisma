@@ -63,6 +63,8 @@ model AffiliateLink {
   campaign   String?
   subIds     Json
   shortUrl   String
+  // sha256 de productId+channel+campaign+subIds normalizados: impede link duplicado para o mesmo pedido.
+  dedupeKey  String   @unique
   createdAt  DateTime @default(now())
   product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   @@index([productId, channel])
