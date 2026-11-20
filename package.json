@@ -1,9 +1,20 @@
 {
-  "name": "afflix-platform", "private": true, "version": "0.1.0",
+  "name": "afflix-platform",
+  "private": true,
+  "version": "0.1.0",
   "packageManager": "pnpm@10.18.0",
   "scripts": {
     "dev": "pnpm --filter @afflix/shared build && pnpm --parallel --filter @afflix/api --filter @afflix/web dev",
     "build": "pnpm --filter @afflix/shared build && pnpm --filter @afflix/api build && pnpm --filter @afflix/web build",
-    "test": "pnpm --filter @afflix/api test"
+    "test": "pnpm --filter @afflix/api test",
+    "lint": "pnpm -r --no-bail lint"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.8",
+    "globals": "^17.14.0",
+    "typescript-eslint": "^8.73.0"
   }
 }
