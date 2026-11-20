@@ -8,13 +8,15 @@ type UniqueWhere = { marketplace_shopId_itemId: { marketplace: string; shopId: s
 // Prisma em memória só para testes unitários (a CI não tem banco). Imita o contrato usado pelos services:
 // upsert pela unique composta, snapshots, findMany por OR, count, $transaction (callback ou array)
 // AffiliateLink com unique em dedupeKey (lança P2002 como o Prisma real), MediaAsset e Publication
-// (include de product/affiliateLink/mediaAsset e updateMany condicional por status).
+// (include de product/affiliateLink/mediaAsset e updateMany condicional por status) e PublicationMetric
+// (findMany com include da publicação e do produto, mais recente primeiro).
 export function createFakePrisma(options: { failFindMany?: boolean } = {}) {
   const products: Row[] = [];
   const snapshots: Row[] = [];
   const links: Row[] = [];
   const media: Row[] = [];
   const publications: Row[] = [];
+  const metrics: Row[] = [];
   const same = (p: Row, k: UniqueWhere['marketplace_shopId_itemId']) =>
     p.marketplace === k.marketplace && p.shopId === k.shopId && p.itemId === k.itemId;
   const matches = (r: Row, where: Row = {}) => Object.entries(where).every(([k, v]) => v === undefined || r[k] === v);
@@ -144,10 +146,30 @@ export function createFakePrisma(options: { failFindMany?: boolean } = {}) {
         return { count: hits.length };
       },
     },
+    publicationMetric: {
+      async create(args: { data: Row }) {
+        const row = { id: randomUUID(), createdAt: new Date(), ...defined(args.data) };
+        metrics.push(row);
+        return row;
+      },
+      // include no formato usado pelo MetricsService: { publication: { select: { ..., product: { select } } } }.
+      async findMany(args: { where?: Row; include?: { publication?: { select: Row } } } = {}) {
+        const rows = metrics.filter(m => matches(m, args.where))
+          .sort((a, b) => b.observedAt.getTime() - a.observedAt.getTime() || b.createdAt.getTime() - a.createdAt.getTime());
+        const sel = args.include?.publication?.select;
+        if (!sel) return rows;
+        const { product: productSel, ...own } = sel;
+        return rows.map(m => {
+          const p = publications.find(x => x.id === m.publicationId)!;
+          const product = productSel ? { product: pick(products.find(x => x.id === p.productId), productSel.select) } : {};
+          return { ...m, publication: { ...pick(p, own), ...product } };
+        });
+      },
+    },
     async $transaction(arg: ((tx: Row) => Promise<unknown>) | Promise<unknown>[]) {
       return typeof arg === 'function' ? arg(api) : Promise.all(arg);
     },
   };
 
-  return { prisma: api as unknown as PrismaService, products, snapshots, links, media, publications };
+  return { prisma: api as unknown as PrismaService, products, snapshots, links, media, publications, metrics };
 }

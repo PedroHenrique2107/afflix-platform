@@ -213,3 +213,86 @@ export type ListPublicationsResponse = {
   data: PublicationView[];
   meta: { page: number; limit: number; total: number; hasNextPage: boolean };
 };
+
+// --- Métricas de publicação (RF11) ---
+// Cada registro é o valor acumulado observado num instante, sempre com fonte, referência e data de observação.
+export const METRIC_KINDS = ['VIEWS', 'CLICKS', 'ORDERS', 'COMMISSION'] as const;
+export type MetricKind = (typeof METRIC_KINDS)[number];
+export const METRIC_KIND_LABELS: Record<MetricKind, string> = {
+  VIEWS: 'Visualizações',
+  CLICKS: 'Cliques',
+  ORDERS: 'Pedidos atribuídos',
+  COMMISSION: 'Comissão (R$)',
+};
+// COMMISSION é BRL com 2 casas; as demais são contagens inteiras.
+export const METRIC_MONEY_KINDS: readonly MetricKind[] = ['COMMISSION'];
+
+// MANUAL: anotado pelo operador. OFFICIAL_REPORT: transcrito de relatório oficial (painel de afiliados, insights do canal).
+// Os dois nunca são somados entre si.
+export const METRIC_SOURCES = ['MANUAL', 'OFFICIAL_REPORT'] as const;
+export type MetricSource = (typeof METRIC_SOURCES)[number];
+export const METRIC_SOURCE_LABELS: Record<MetricSource, string> = {
+  MANUAL: 'Registro manual',
+  OFFICIAL_REPORT: 'Relatório oficial',
+};
+
+export const METRIC_SOURCE_REFERENCE_MIN_LENGTH = 3;
+export const METRIC_SOURCE_REFERENCE_MAX_LENGTH = 200;
+export const METRIC_VALUE_MAX = '999999999999.99';
+
+export type PublicationMetricView = {
+  id: string;
+  publicationId: string;
+  kind: MetricKind;
+  value: string; // decimal em string: "120" para contagens, "12.34" para comissão
+  source: MetricSource;
+  sourceReference: string; // de onde o número saiu
+  observedAt: string; // ISO 8601: quando o número foi visto na fonte
+  createdAt: string; // ISO 8601: quando foi registrado no Afflix
+};
+
+// POST /api/v1/publications/:id/metrics. Só para publicação já publicada (publishedAt preenchido), senão 409.
+export type RecordPublicationMetricRequest = {
+  kind: MetricKind;
+  value: string | number; // >= 0; contagens inteiras, comissão até 2 casas
+  source: MetricSource;
+  sourceReference: string;
+  observedAt: string; // YYYY-MM-DD ou ISO 8601; não futuro e não anterior a publishedAt
+};
+
+export type PublicationMetricResponse = { data: PublicationMetricView };
+// GET /api/v1/publications/:id/metrics. Histórico completo, mais recente primeiro.
+export type ListPublicationMetricsResponse = { data: PublicationMetricView[] };
+
+// GET /api/v1/metrics/report?groupBy=publication|product
+export const METRICS_REPORT_GROUP_BY = ['publication', 'product'] as const;
+export type MetricsReportGroupBy = (typeof METRICS_REPORT_GROUP_BY)[number];
+
+// Um número do relatório: soma do último acumulado de cada publicação do grupo, para uma métrica e UMA fonte.
+export type MetricsReportCell = {
+  kind: MetricKind;
+  source: MetricSource;
+  value: string;
+  publicationCount: number; // publicações que entraram na soma
+  observedAt: string; // observação mais recente entre as somadas
+  oldestObservedAt: string; // observação mais antiga entre as somadas (igual a observedAt quando há uma só)
+  sourceReferences: string[]; // referências distintas dos registros usados
+};
+
+export type MetricsReportGroup = {
+  product: { id: string; name: string };
+  // Preenchido só em groupBy=publication.
+  publication: {
+    id: string;
+    channel: AffiliateChannel;
+    status: PublicationStatus;
+    externalUrl: string | null;
+    publishedAt: string | null;
+  } | null;
+  metrics: MetricsReportCell[]; // só combinações com registro: nenhum número sem origem
+};
+
+export type MetricsReportResponse = {
+  data: MetricsReportGroup[];
+  meta: { groupBy: MetricsReportGroupBy; generatedAt: string };
+};
