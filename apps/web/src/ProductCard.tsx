@@ -83,20 +83,22 @@ export function ProductCard({ offer, source, onSaved }: Props) {
     if (link) setStatus(await copy(link.shortUrl) ? 'copied' : 'copy-failed');
   }
 
-  return <article className="card">
-    <div className="thumb">▦</div>
+  return <article className={offer.saved ? 'card saved' : 'card'}>
+    <div className="thumb">▦{offer.saved && <span className="saved-badge">✓ No catálogo</span>}</div>
     <div className="info">
       <h3>{offer.name}</h3>
       <p>Preço: {offer.price?`R$ ${offer.price}`:'não informado'}</p>
       <p>Comissão: <strong>{offer.commissionPercent}%</strong></p>
       <p>Avaliação: {offer.rating??'não informada'}</p>
-      {offer.saved && <p className="saved-tag">✓ Salvo no catálogo</p>}
       {source !== 'mock' && <a href={offer.productUrl} target="_blank" rel="noopener noreferrer">Ver produto</a>}
 
       <div className="save-action">
-        <button type="button" className="secondary" onClick={()=>void save()} disabled={saveStatus==='saving'}>
-          {saveStatus==='saving'?'Salvando...':'Salvar no catálogo'}
-        </button>
+        {/* Já no catálogo: a ação some para não reimportar (cada import grava um PriceSnapshot). */}
+        {offer.saved
+          ? <button type="button" className="secondary" disabled>✓ Salvo no catálogo</button>
+          : <button type="button" className="secondary" onClick={()=>void save()} disabled={saveStatus==='saving'}>
+              {saveStatus==='saving'?'Salvando...':'Salvar no catálogo'}
+            </button>}
         {saveStatus==='saved' && <p className="save-status" role="status">Produto salvo no catálogo.</p>}
         {saveError && <p className="error" role="alert">Não foi possível salvar: {saveError}</p>}
       </div>
