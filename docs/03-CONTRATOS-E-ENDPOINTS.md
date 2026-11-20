@@ -148,7 +148,51 @@ JSON só com metadados: `title`, `licenseType`, `sourceUrl`, `rightsEvidence`, `
 
 ### Regra de licença
 
-`licenseStatus` é calculado a cada resposta: `VALID` (tem `rightsEvidence` e não venceu), `MISSING_EVIDENCE` ou `EXPIRED`. `publishable` = `VALID`. O módulo de publicações deve chamar `assertMediaPublishable()` (`apps/api/src/modules/media/media-license.ts`) antes de associar um asset: fora de `VALID` responde `409`.
+`licenseStatus` é calculado a cada resposta: `VALID` (tem `rightsEvidence` e não venceu), `MISSING_EVIDENCE` ou `EXPIRED`. `publishable` = `VALID`. O módulo de publicações chama `assertMediaPublishable()` (`apps/api/src/modules/media/media-license.ts`) ao associar um asset e de novo ao marcar `READY` e `PUBLISHED_MANUALLY`: fora de `VALID` responde `409`.
+
+## GET /affiliate-links — implementado (SW-20)
+
+Query `productId` (UUID, obrigatório) e `channel` (opcional). Devolve `{ data: AffiliateLinkView[] }` com os links já gerados do produto, mais recente primeiro (até 50). Não chama a Shopee.
+
+## Publicação manual — implementado (SW-19 / RF10)
+
+Tipos do contrato em `@afflix/shared` (`PublicationView`, `CreatePublicationRequest`, `UpdatePublicationRequest`, `ChangePublicationStatusRequest`, `PUBLICATION_TRANSITIONS`, `DEFAULT_CTA_BY_CHANNEL`).
+
+### Transições
+
+| De | Para |
+|---|---|
+| `DRAFT` | `READY`, `ARCHIVED` (descartar rascunho) |
+| `READY` | `DRAFT` (voltar para edição), `PUBLISHED_MANUALLY` |
+| `PUBLISHED_MANUALLY` | `ARCHIVED` |
+| `ARCHIVED` | nenhuma |
+
+Qualquer outra transição responde `400`. Cada `PublicationView` traz `allowedTransitions`.
+
+### POST /publications
+
+JSON: `productId` e `channel` (obrigatórios), `caption`, `cta`, `affiliateLinkId`, `mediaAssetId` (opcionais). Nasce `DRAFT`. Sem `cta`, usa o padrão do canal. O link precisa ser do mesmo produto e do mesmo canal (`400`); mídia fora de `VALID` → `409`; produto, link ou mídia inexistente → `404`.
+
+### PATCH /publications/:id
+
+Só em `DRAFT` (`409` nos demais). Campos: `channel`, `caption`, `cta`, `affiliateLinkId`, `mediaAssetId`. Ausente mantém; `null` ou vazio limpa. Trocar o canal exige link do novo canal.
+
+### POST /publications/:id/status
+
+JSON `{ "status": "...", "externalUrl"?: "...", "publishedAt"?: "..." }`, resposta `200` com a publicação.
+
+- `READY` exige legenda, CTA e link de afiliado (`400` dizendo o que falta).
+- `PUBLISHED_MANUALLY` exige `externalUrl` (http/https) e `publishedAt` (`YYYY-MM-DD` ou ISO 8601, não pode estar no futuro).
+- `externalUrl`/`publishedAt` em outro destino → `400`.
+- Grava só se o status ainda for o lido; corrida entre duas abas → `409`.
+
+### GET /publications/:id/briefing (SW-21)
+
+Download `text/plain; charset=utf-8` (`Content-Disposition: attachment`, `briefing-<canal>-<produto>-<id>.txt`) com produto (nome, preço, página), link de afiliado, legenda, CTA, texto pronto para colar, mídia (arquivo, SHA-256, licença e prova) ou o aviso de que não há mídia, e o checklist manual. `409` se faltar legenda, CTA ou link; `409` se a publicação ainda não foi publicada e a licença da mídia deixou de valer. Funciona sem mídia associada.
+
+### GET /publications e GET /publications/:id
+
+Lista paginada (`page`, `limit` 1–50, `status` opcional), ordenada pela última alteração. Mesmo `meta` do `GET /products`.
 
 ## Rotas do backlog (não implementadas no scaffold)
 
@@ -157,8 +201,6 @@ JSON só com metadados: `title`, `licenseType`, `sourceUrl`, `rightsEvidence`, `
 | GET | `/products/:id` | Retornar dados e último snapshot |
 | POST | `/products/:id/refresh` | Atualizar com fonte e horário, preservar snapshot |
 | GET | `/products/:id/history` | Preços/taxas anteriores com timezone UTC |
-| POST | `/publications` | rascunho com produto, mídia, canal |
-| PATCH | `/publications/:id` | transições e URL publicada manualmente |
 
 ## Respostas e erros
 

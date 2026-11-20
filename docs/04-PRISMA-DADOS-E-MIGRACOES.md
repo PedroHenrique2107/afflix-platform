@@ -20,7 +20,7 @@ erDiagram
 
 **MediaAsset** — caminho da mídia, origem, hash, tipo de licença e evidência verificável de uso comercial.
 
-**Publication** — canal, draft, ready, publicado manualmente, arquivado, URL externa e data.
+**Publication** — canal, draft, ready, publicado manualmente, arquivado, URL externa e data. Liga-se ao `AffiliateLink` que vai no briefing (`affiliateLinkId`, opcional, `ON DELETE SET NULL`) e guarda o `cta` (migration `publication_affiliate_link_cta`, SW-20).
 
 ## Tipos e constraints
 
