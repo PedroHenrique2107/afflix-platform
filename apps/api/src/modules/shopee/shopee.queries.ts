@@ -1,4 +1,5 @@
-// Os campos/argumentos devem ser confirmados pelo schema da conta real.
+// Homologada na conta real em 20/11/2026 (SW-4): todos os campos e os argumentos listType/sortType aceitos.
+// O tipo ProductOfferV2 tem 25 campos; pedimos só os 12 que o domínio usa. Reexecutar: pnpm --filter @afflix/api shopee:homologar
 export const PRODUCT_OFFERS_QUERY = `
 query SearchOffers($keyword: String!, $page: Int!, $limit: Int!) {
   productOfferV2(keyword: $keyword, listType: 1, sortType: 5, page: $page, limit: $limit) {

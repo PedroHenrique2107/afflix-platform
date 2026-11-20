@@ -28,6 +28,18 @@ export type AffiliateLinkView = {
   createdAt: string;
 };
 
+// GET /api/v1/integrations/status (RF08). Nunca carrega credencial nem fragmento dela.
+export type IntegrationMode = 'mock' | 'live';
+export type IntegrationStatusResponse = {
+  data: {
+    shopee: {
+      mode: IntegrationMode;
+      // Última chamada bem-sucedida à Shopee desde que a api subiu (ISO 8601). null: nenhuma ainda.
+      lastSuccessfulSyncAt: string | null;
+    };
+  };
+};
+
 export type CreateAffiliateLinkResponse = {
   data: AffiliateLinkView;
   // reused=true: já existia link para o mesmo produto+canal+campanha+subIds e nada foi gerado na Shopee.

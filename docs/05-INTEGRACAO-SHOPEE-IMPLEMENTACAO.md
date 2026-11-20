@@ -28,11 +28,29 @@ Copiar `apps/api/.env.example` para `apps/api/.env`. Sem credenciais, `SHOPEE_MO
 ```graphql
 query SearchOffers($keyword: String!, $page: Int!, $limit: Int!) {
   productOfferV2(keyword: $keyword, listType: 1, sortType: 5, page: $page, limit: $limit) {
-    nodes { itemId shopId productName productLink offerLink imageUrl priceMin commissionRate ratingStar }
+    nodes {
+      itemId shopId productName productLink offerLink imageUrl
+      priceMin priceMax commissionRate commission ratingStar sales
+    }
     pageInfo { page limit hasNextPage }
   }
 }
 ```
+
+### Homologação da busca na conta real (SW-4, 20/11/2026)
+
+Executada com `pnpm --filter @afflix/api shopee:homologar` (introspecção + busca de 3 itens; saída sem credencial e com URLs sem query string). Resultado:
+
+- **Query aceita sem ajuste**: os 12 campos acima e os argumentos `listType`/`sortType` existem e são liberados para a conta.
+- Assinatura do campo: `productOfferV2(listType: Int, matchId: Int64, keyword: String, sortType: Int, page: Int, limit: Int, itemId: Int64, shopId: Int64, productCatId: Int, isAMSOffer: Boolean, isKeySeller: Boolean): ProductOfferConnectionV2!`.
+- `ProductOfferV2` tem 25 campos. Não pedidos hoje (disponíveis para evolução): `price`, `shopName`, `appExistRate`, `appNewRate`, `webExistRate`, `webNewRate`, `sellerCommissionRate`, `shopeeCommissionRate`, `priceDiscountRate`, `periodStartTime`, `periodEndTime`, `productCatIds`, `shopType`.
+- Tipos: `itemId`, `shopId`, `sales` são `Int64` (chegam como number JSON); preço, taxas, `commission` e `ratingStar` são `String`.
+- **`commissionRate` é fração** (`"0.53"` = 53%). Confirmado com dinheiro: `commission = priceMin × commissionRate` nos 3 itens (ex.: `17.85 × 0.53 = 9.4605`).
+- **IDs**: valores reais com ~11 dígitos (ex.: `58255557635`), bem abaixo de 2^53. Por garantia, o provider descarta (com aviso no log) item cujo ID chegue fora do intervalo seguro, em vez de gravar ID corrompido.
+- **`ratingStar: "0"`** aparece em produto sem avaliação; o provider mapeia para ausente, não para nota zero.
+- `productLink` real: `https://shopee.com.br/product/{shopId}/{itemId}`. `offerLink` já vem como short link `s.shopee.com.br`.
+
+Fixture redigida desta resposta: `apps/api/src/modules/discovery/shopee-offer.provider.spec.ts`.
 
 ```graphql
 mutation GenerateLink($originUrl: String!, $subIds: [String!]) {
