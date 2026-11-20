@@ -67,6 +67,7 @@ model AffiliateLink {
   dedupeKey  String   @unique
   createdAt  DateTime @default(now())
   product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  publications Publication[]
   @@index([productId, channel])
 }
 
@@ -87,14 +88,18 @@ model Publication {
   id             String @id @default(uuid()) @db.Uuid
   productId      String @db.Uuid
   mediaAssetId   String? @db.Uuid
+  // Link que vai no briefing. Precisa ser do mesmo produto; obrigatório para sair de DRAFT.
+  affiliateLinkId String? @db.Uuid
   channel        String
   status         PublicationStatus @default(DRAFT)
   caption        String?
+  cta            String?
   externalUrl    String?
   publishedAt    DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   product        Product @relation(fields: [productId], references: [id])
   mediaAsset     MediaAsset? @relation(fields: [mediaAssetId], references: [id])
+  affiliateLink  AffiliateLink? @relation(fields: [affiliateLinkId], references: [id])
   @@index([status, channel])
 }

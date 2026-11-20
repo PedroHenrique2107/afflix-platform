@@ -2,9 +2,9 @@ import { ConflictException, Inject, Injectable, NotFoundException } from '@nestj
 import { Prisma } from '@prisma/client';
 import type { AffiliateLink } from '@prisma/client';
 import { createHash } from 'node:crypto';
-import type { AffiliateChannel, AffiliateLinkView, CreateAffiliateLinkResponse } from '@afflix/shared';
+import type { AffiliateChannel, AffiliateLinkView, CreateAffiliateLinkResponse, ListAffiliateLinksResponse } from '@afflix/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateAffiliateLinkDto } from './affiliate-link.dto';
+import { CreateAffiliateLinkDto, ListAffiliateLinksDto } from './affiliate-link.dto';
 import { LINK_PROVIDER, LinkProvider } from './link-provider';
 
 // Só gera link para produto cuja origem é a própria Shopee (evita usar a mutation como encurtador genérico).
@@ -51,6 +51,15 @@ export class AffiliateLinksService {
     @Inject(LINK_PROVIDER) private readonly provider: LinkProvider,
     @Inject(PrismaService) private readonly prisma: PrismaService,
   ) {}
+
+  async listByProduct(dto: ListAffiliateLinksDto): Promise<ListAffiliateLinksResponse> {
+    const rows = await this.prisma.affiliateLink.findMany({
+      where: { productId: dto.productId, ...(dto.channel && { channel: dto.channel }) },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return { data: rows.map(serialize) };
+  }
 
   async create(dto: CreateAffiliateLinkDto): Promise<CreateAffiliateLinkResponse> {
     const product = await this.prisma.product.findUnique({ where: { id: dto.productId } });

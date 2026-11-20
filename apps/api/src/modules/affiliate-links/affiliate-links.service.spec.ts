@@ -108,3 +108,20 @@ describe('regras de link', () => {
     expect(effectiveSubIds({ channel: 'TELEGRAM' })).toEqual(['telegram']);
   });
 });
+
+describe('AffiliateLinksService.listByProduct', () => {
+  it('lista os links do produto, filtra por canal e não chama o fornecedor', async () => {
+    const provider = new MockLinkProvider();
+    const spy = vi.spyOn(provider, 'generate');
+    const { service } = setup(provider);
+    await service.create(dto({ channel: 'INSTAGRAM' }));
+    await service.create(dto({ channel: 'TIKTOK' }));
+    spy.mockClear();
+    const all = await service.listByProduct({ productId: 'b6f1c1a0-0000-4000-8000-000000000001' });
+    expect(all.data.map(l => l.channel).sort()).toEqual(['INSTAGRAM', 'TIKTOK']);
+    const tiktok = await service.listByProduct({ productId: 'b6f1c1a0-0000-4000-8000-000000000001', channel: 'TIKTOK' });
+    expect(tiktok.data).toHaveLength(1);
+    expect((await service.listByProduct({ productId: 'b6f1c1a0-0000-4000-8000-0000000000ff' })).data).toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
+  });
+});

@@ -133,3 +133,83 @@ export type ListMediaAssetsResponse = {
   data: MediaAssetView[];
   meta: { page: number; limit: number; total: number; hasNextPage: boolean };
 };
+
+// GET /api/v1/affiliate-links?productId=... Links já gerados de um produto, para escolher qual vai na publicação.
+export type ListAffiliateLinksResponse = { data: AffiliateLinkView[] };
+
+// --- Publicação manual (RF10) ---
+export const PUBLICATION_STATUSES = ['DRAFT', 'READY', 'PUBLISHED_MANUALLY', 'ARCHIVED'] as const;
+export const PUBLICATION_STATUS_LABELS: Record<PublicationStatus, string> = {
+  DRAFT: 'Rascunho',
+  READY: 'Pronta para publicar',
+  PUBLISHED_MANUALLY: 'Publicada',
+  ARCHIVED: 'Arquivada',
+};
+
+// Segue a ordem do enum. Exceções: READY volta a DRAFT para edição e um rascunho pode ser descartado (ARCHIVED).
+// Fora desta tabela a api responde 400.
+export const PUBLICATION_TRANSITIONS: Record<PublicationStatus, readonly PublicationStatus[]> = {
+  DRAFT: ['READY', 'ARCHIVED'],
+  READY: ['DRAFT', 'PUBLISHED_MANUALLY'],
+  PUBLISHED_MANUALLY: ['ARCHIVED'],
+  ARCHIVED: [],
+};
+
+// CTA sugerido quando o operador não informa um. Ele pode editar enquanto a publicação é rascunho.
+export const DEFAULT_CTA_BY_CHANNEL: Record<AffiliateChannel, string> = {
+  INSTAGRAM: 'Link na bio para comprar com desconto',
+  TIKTOK: 'Link na bio para comprar com desconto',
+  SHOPEE_VIDEO: 'Toque no produto do vídeo para comprar',
+  TELEGRAM: 'Compre pelo link abaixo',
+};
+
+export const PUBLICATION_CAPTION_MAX_LENGTH = 2200;
+export const PUBLICATION_CTA_MAX_LENGTH = 200;
+
+export type PublicationView = {
+  id: string;
+  status: PublicationStatus;
+  allowedTransitions: PublicationStatus[];
+  channel: AffiliateChannel;
+  product: { id: string; name: string };
+  caption: string | null;
+  cta: string | null;
+  affiliateLink: { id: string; shortUrl: string } | null;
+  media: { id: string; title: string; licenseStatus: MediaLicenseStatus } | null;
+  externalUrl: string | null; // URL do post no canal, informada ao marcar como publicada
+  publishedAt: string | null; // ISO 8601
+  createdAt: string;
+  updatedAt: string;
+};
+
+// POST /api/v1/publications. Nasce como DRAFT. Mídia só entra se a licença estiver VALID (409 caso contrário).
+export type CreatePublicationRequest = {
+  productId: string;
+  channel: AffiliateChannel;
+  caption?: string;
+  cta?: string; // ausente: DEFAULT_CTA_BY_CHANNEL[channel]
+  affiliateLinkId?: string; // mesmo produto e mesmo canal da publicação
+  mediaAssetId?: string;
+};
+
+// PATCH /api/v1/publications/:id. Só em DRAFT (409 nos demais). null desassocia/limpa o campo.
+export type UpdatePublicationRequest = {
+  channel?: AffiliateChannel;
+  caption?: string | null;
+  cta?: string | null;
+  affiliateLinkId?: string | null;
+  mediaAssetId?: string | null;
+};
+
+// POST /api/v1/publications/:id/status. PUBLISHED_MANUALLY exige externalUrl e publishedAt; os outros destinos recusam esses campos.
+export type ChangePublicationStatusRequest = {
+  status: PublicationStatus;
+  externalUrl?: string;
+  publishedAt?: string; // YYYY-MM-DD ou ISO 8601; não pode estar no futuro
+};
+
+export type PublicationResponse = { data: PublicationView };
+export type ListPublicationsResponse = {
+  data: PublicationView[];
+  meta: { page: number; limit: number; total: number; hasNextPage: boolean };
+};

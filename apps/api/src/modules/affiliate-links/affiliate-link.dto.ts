@@ -24,3 +24,11 @@ export class CreateAffiliateLinkDto {
   @IsString({ each: true }) @Matches(SUB_ID_PATTERN, { each: true, message: 'cada subId deve ter de 1 a 50 caracteres alfanuméricos' })
   subIds?: string[];
 }
+
+export class ListAffiliateLinksDto {
+  @IsUUID('all', { message: 'productId é obrigatório e deve ser um UUID' })
+  productId!: string;
+
+  @IsOptional() @IsIn(AFFILIATE_CHANNELS)
+  channel?: AffiliateChannel;
+}
