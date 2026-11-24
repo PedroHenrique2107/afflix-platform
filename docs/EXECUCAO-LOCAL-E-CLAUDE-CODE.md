@@ -74,3 +74,46 @@ Peça confirmação antes de executar migrations destrutivas ou comandos Git rem
 - Docker indisponível: abrir Docker Desktop e verificar `docker compose ps`.
 - Porta 5432 ocupada: alterar mapeamento local e DATABASE_URL conjuntamente.
 - HTTP 502 Shopee: manter mock; não inserir credenciais fictícias.
+- `.env` correto mas a API se comporta como se não fosse: veja abaixo.
+
+### Variável da sessão sobrepondo o `.env`
+
+**Sintoma:** o `.env` da raiz diz uma coisa e a API faz outra. Caso real (11/11/2026):
+`SHOPEE_MOCK_MODE=false` no `.env`, mas a API seguia servindo dados mock.
+
+**Causa:** a variável estava exportada na sessão do terminal (`SHOPEE_MOCK_MODE=true`).
+Nem o `dotenv` (usado pela API em `apps/api/src/load-env.ts`) nem o
+`--env-file-if-exists` do Node (usado pelos scripts `prisma:*`) sobrescrevem uma
+chave que já existe no ambiente. **A sessão vence o arquivo.** Isso é intencional:
+permite override pontual, como `PORT=3001`.
+
+**Diagnóstico:** ao subir, a API avisa no log quais chaves do `.env` estão sendo
+sobrepostas. O aviso lista só os nomes, nunca os valores:
+
+```text
+WARN [LoadEnv] Variáveis exportadas na sessão do terminal estão sobrepondo o .env: SHOPEE_MOCK_MODE. A sessão vence o arquivo. ...
+```
+
+Para conferir à mão quais chaves estão na sessão (só os nomes):
+
+```powershell
+Get-ChildItem Env:SHOPEE*, Env:DATABASE_URL, Env:PORT -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
+```
+
+**Saída:** remova a variável da sessão e reinicie a API.
+
+```powershell
+Remove-Item Env:SHOPEE_MOCK_MODE      # bash: unset SHOPEE_MOCK_MODE
+```
+
+Se ela voltar em todo terminal novo, está gravada no nível de usuário ou de máquina
+do Windows (ou foi herdada pelo VS Code, que precisa ser reiniciado). Para ver onde
+está, também só pelo nome:
+
+```powershell
+foreach ($s in 'User','Machine') { foreach ($n in 'SHOPEE_MOCK_MODE','DATABASE_URL') { if ([Environment]::GetEnvironmentVariable($n, $s)) { "$s : $n" } } }
+```
+
+**Atenção com os scripts `prisma:*`:** eles seguem a mesma precedência, mas **não
+avisam**. Um `DATABASE_URL` esquecido na sessão faz `prisma:migrate` rodar em outro
+banco, em silêncio. Antes de migrar, rode o comando de diagnóstico acima.

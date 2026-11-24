@@ -104,6 +104,14 @@ Só documentação; sem código, dependência, script ou variável de ambiente n
 - Validado (23/11/2026): cenário real com `docker compose down -v` (volume removido, banco novo com 0 tabelas) e restore do dump: 7 tabelas com contagem e hash idênticos ao de antes do backup, `migrate status` em dia, `prisma migrate diff` contra o `schema.prisma` sem diferença. Os blocos PowerShell da doc foram executados literalmente, incluindo um restore sobre banco já populado.
 - Fora do escopo: backup da mídia (`data/media`), agendamento, retenção, criptografia e cópia fora da máquina.
 
+## SW-31 — Aviso quando variável da sessão diverge do `.env` (branch `chore/SW-31-aviso-env-divergente`)
+Só api e docs; sem dependência nova, variável de ambiente nova ou mudança de precedência.
+- `apps/api/src/env-file.ts` (`loadEnvFile`): carrega o `.env` sem `override` (a sessão continua vencendo) e, se algum valor efetivo diferir do arquivo, avisa no boot via `Logger` (`WARN [LoadEnv]`) listando **só os nomes** das chaves. `load-env.ts` só chama essa função; a ordem de imports do `main.ts` não mudou.
+- `apps/api/src/env-file.spec.ts`: 8 testes com `.env` temporário e `env` falso (o `process.env` real não é tocado) cobrindo detecção, ausência de ruído, precedência, arquivo ausente e não vazamento de `SHOPEE_APP_SECRET`/`DATABASE_URL`. Conferido por mutação: vazar valor no aviso e trocar para `override: true` fazem os testes falharem.
+- Pegadinha, diagnóstico e saída documentados em `docs/EXECUCAO-LOCAL-E-CLAUDE-CODE.md`.
+- Validado (23/11/2026): API em `tsx` na 3001 com `SHOPEE_MOCK_MODE=true` e `SHOPEE_APP_SECRET` falso na sessão (`.env` em live) → aviso como primeira linha do boot, `/integrations/status` em `mock` (sessão venceu), valor do segredo ausente do log. `load-env` real com sessão limpa ou com valor igual ao arquivo → nenhum aviso.
+- Fora do escopo: scripts `prisma:*` (carregador nativo do Node, sem aviso); a limitação ficou documentada.
+
 ## Pendente
 - ~~Validar query GraphQL com acesso real aprovado pela Shopee.~~ Feito na SW-3 (busca). Atribuição dos subIds no painel segue pendente (SW-2).
 - Tabela "Estado atual do projeto" do `README.md` desatualizada desde a PR-001 (ainda marca banco e migrações como planejados).
