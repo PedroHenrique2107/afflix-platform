@@ -98,6 +98,12 @@ Só api e docs; sem dependência nova, variável de ambiente nova ou mudança de
 - `apps/api/src/modules/app.module.di.spec.ts` percorre os módulos a partir do `AppModule` e falha se algum controller/provider tiver parâmetro de construtor sem `@Inject`, ou se uma `useFactory` tiver menos `inject` do que parâmetros.
 - Validado (20/11/2026): `pnpm test` 195/195, `pnpm build` e `pnpm lint` OK (api 9 warnings, no teto). Com o `@Inject` do `MetricsService` removido de propósito, o teste falha apontando `MetricsModule > MetricsService: parâmetro(s) 0`. A api em `tsx` respondeu `/health`.
 
+## SW-30 — Backup: dump e recuperação do Postgres local (branch `chore/SW-30-backup-postgres-local`)
+Só documentação; sem código, dependência, script ou variável de ambiente nova.
+- Procedimento em `docs/operacao/BACKUP-POSTGRES.md`: `pg_dump -Fc` dentro do container + `docker compose cp` para `data/backups/` (já ignorado pelo Git), conferência com `pg_restore -l`, restore com `--clean --if-exists --single-transaction --exit-on-error` e verificação por contagem + hash md5 por tabela e `prisma migrate status`. Registra as armadilhas do PowerShell 5.1 (`>` em UTF-16 corrompe o dump; aspas duplas removidas em `psql -c`).
+- Validado (23/11/2026): cenário real com `docker compose down -v` (volume removido, banco novo com 0 tabelas) e restore do dump: 7 tabelas com contagem e hash idênticos ao de antes do backup, `migrate status` em dia, `prisma migrate diff` contra o `schema.prisma` sem diferença. Os blocos PowerShell da doc foram executados literalmente, incluindo um restore sobre banco já populado.
+- Fora do escopo: backup da mídia (`data/media`), agendamento, retenção, criptografia e cópia fora da máquina.
+
 ## Pendente
 - ~~Validar query GraphQL com acesso real aprovado pela Shopee.~~ Feito na SW-3 (busca). Atribuição dos subIds no painel segue pendente (SW-2).
 - Tabela "Estado atual do projeto" do `README.md` desatualizada desde a PR-001 (ainda marca banco e migrações como planejados).

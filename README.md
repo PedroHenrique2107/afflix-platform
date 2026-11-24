@@ -234,6 +234,8 @@ pnpm build
 pnpm dev
 ```
 
+Backup e restauração do banco local: [docs/operacao/BACKUP-POSTGRES.md](docs/operacao/BACKUP-POSTGRES.md). Um `docker compose down -v` apaga o volume do Postgres, então faça um dump antes.
+
 **Atenção:** estes comandos são o **contrato operacional pretendido**, e ainda não são executáveis no repositório atual, que contém apenas documentação. Antes de utilizá-los, a PR 001 deverá adicionar `package.json`, workspace, aplicações e scripts correspondentes. A migração Prisma pode exigir comando interativo, conforme o script configurado.
 
 ### Variáveis de ambiente previstas

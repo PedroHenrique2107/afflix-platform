@@ -26,6 +26,8 @@ Live: smoke test controlado na conta da sócia, sem expor payload confidencial.
 
 Backups periódicos `pg_dump`; arquivos de mídia fora do Git, cópia independente da máquina, restauração de teste. Docker volume não substitui backup.
 
+Procedimento de dump e restauração do PostgreSQL local, com a restauração executada em banco limpo: [operacao/BACKUP-POSTGRES.md](operacao/BACKUP-POSTGRES.md).
+
 ## Deploy e custo
 
 V1 roda localmente; sem custo de hospedagem, mas há energia, armazenamento e possíveis licenças/API de IA. Só mover para cloud quando houver necessidade de disponibilidade contínua e orçamento sustentável.

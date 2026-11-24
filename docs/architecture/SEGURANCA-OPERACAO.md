@@ -4,7 +4,7 @@
 - API e banco vinculados a localhost. Não expor portas do Docker na rede local indiscriminadamente.
 - CORS apenas `http://localhost:5173` durante desenvolvimento.
 - Usuário titular da conta de afiliados controla e autoriza uso das credenciais; documentar responsabilidades dos sócios.
-- Backups periódicos do PostgreSQL e da mídia; testar restauração. Criptografar backups sensíveis.
+- Backups periódicos do PostgreSQL e da mídia; testar restauração. Criptografar backups sensíveis. Procedimento do PostgreSQL local: [../operacao/BACKUP-POSTGRES.md](../operacao/BACKUP-POSTGRES.md).
 - Vídeos: registrar origem, licença, titular, data e restrições de uso; evitar republicação não autorizada.
 - Imagens/links externos tratados como dados não confiáveis; não executar HTML arbitrário.
 - Validação de URL para impedir SSRF; limites de upload e MIME; antivírus opcional quando houver upload público.
